@@ -4,11 +4,11 @@ using System.Linq;
 
 namespace FirmaDashboardDemo.Controllers
 {
-    public class AdminController : Controller
+    public class CalisanController : Controller
     {
         private readonly ApplicationDbContext _context;
 
-        public AdminController(ApplicationDbContext context)
+        public CalisanController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -22,13 +22,13 @@ namespace FirmaDashboardDemo.Controllers
         [HttpPost]
         public IActionResult Login(string Username, string Password)
         {
-            var admin = _context.FirmaCalisanlari
+            var calisan = _context.FirmaCalisanlari
                 .FirstOrDefault(x => x.Email == Username && x.Sifre == Password && x.AktifMi);
 
-            if (admin != null)
+            if (calisan != null)
             {
-                HttpContext.Session.SetString("UserRole", "Admin");
-                HttpContext.Session.SetInt32("UserId", admin.Id);
+                HttpContext.Session.SetString("UserRole", "Calisan");
+                HttpContext.Session.SetInt32("UserId", calisan.Id);
                 return RedirectToAction("Dashboard");
             }
 

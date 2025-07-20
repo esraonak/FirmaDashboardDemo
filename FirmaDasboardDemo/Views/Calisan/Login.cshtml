@@ -1,0 +1,48 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>Çalışan Giriş</title>
+    <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css">
+    <link rel="stylesheet" href="~/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
+    <link rel="stylesheet" href="~/dist/css/adminlte.min.css">
+</head>
+<body class="hold-transition login-page">
+    <div class="login-box">
+        <div class="login-logo"><b>Çalışan</b> Giriş</div>
+        <div class="card">
+            <div class="card-body login-card-body">
+                <p class="login-box-msg">Lütfen giriş yapın</p>
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger">@ViewBag.Error</div>
+                }
+
+                <form asp-action="Login" method="post">
+                    <div class="input-group mb-3">
+                        <input type="text" name="Username" class="form-control" placeholder="Email" required />
+                        <div class="input-group-append"><div class="input-group-text"><span class="fas fa-user"></span></div></div>
+                    </div>
+                    <div class="input-group mb-3">
+                        <input type="password" name="Password" class="form-control" placeholder="Şifre" required />
+                        <div class="input-group-append"><div class="input-group-text"><span class="fas fa-lock"></span></div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-8"></div>
+                        <div class="col-4"><button type="submit" class="btn btn-primary btn-block">Giriş</button></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/plugins/jquery/jquery.min.js"></script>
+    <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="~/dist/js/adminlte.min.js"></script>
+</body>
+</html>

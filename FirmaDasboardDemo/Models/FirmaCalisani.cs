@@ -21,6 +21,9 @@ namespace FirmaDasboardDemo.Models
         [Required]
         [MaxLength(100)]
         public string Sifre { get; set; }  // ✅ Şifre alanı eklendi
+        public int RolId { get; set; }
+        [ForeignKey("RolId")]
+        public Rol Rol { get; set; }
 
         // Foreign Key
         public int FirmaId { get; set; }

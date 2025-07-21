@@ -13,13 +13,16 @@ namespace FirmaDasboardDemo.Data
             using var context = new ApplicationDbContext(
                 serviceProvider.GetRequiredService<DbContextOptions<ApplicationDbContext>>());
 
-            // ❌ Eğer test için sürekli eklemek istiyorsan bu satırı yoruma al
-           
+            // Rolleri ekle
+            var rolCalisan = new Rol { Ad = "Calisan" };
+            var rolBayi = new Rol { Ad = "Bayi" };
+            context.Roller.AddRange(rolCalisan, rolBayi);
+            context.SaveChanges();
 
-            // Firma
+            // Firma ekle
             var firma = new Firma
             {
-                Ad = "Örnek3 Firma",
+                Ad = "Firmamıd1",
                 Adres = "İstanbul, Türkiye",
                 Il = "İstanbul",
                 Ilce = "Kadıköy",
@@ -31,35 +34,37 @@ namespace FirmaDasboardDemo.Data
                 AktifMi = true
             };
             context.Firmalar.Add(firma);
-            context.SaveChanges(); // firma.Id oluşur
+            context.SaveChanges();
 
-            // Firma Çalışanı
+            // Firma Çalışanı ekle
             var calisan = new FirmaCalisani
             {
-                AdSoyad = "Ayşe Yılmaz",
-                Email = "ayse@ornekfirma.com",
+                AdSoyad = "calısanıd1",
+                Email = "calısan@ornekfirma.com",
                 Sifre = "1234",
+                Telefon = "02126667788",
                 FirmaId = firma.Id,
                 AktifMi = true,
-                 Telefon = "02126667788"
+                RolId = rolCalisan.Id
             };
             context.FirmaCalisanlari.Add(calisan);
-            context.SaveChanges(); // calisan.Id oluşur
+            context.SaveChanges();
 
-            // Bayi
+            // Bayi ekle
             var bayi = new Bayi
             {
-                Ad = "Anadolu Bayi",
-                Adres = "Ankara, Türkiye", // ✅ NULL olmaması için adres ver
-                Il = "Ankara",
-                Ilce = "Çankaya",
-                Email = "bayi@anadolu.com",
-                Telefon = "03124445566",   // ✅ Telefonu da unutma
+                Ad = "Avrupa Bayiıd1",
+                Adres = "istanbul, Türkiye",
+                Il = "istanbul",
+                Ilce = "cekmekoy",
+                Email = "bayi@avrupa.com",
+                Telefon = "03124445566",
                 Sifre = "1234",
-                AktifMi = true
+                AktifMi = true,
+                RolId = rolBayi.Id
             };
             context.Bayiler.Add(bayi);
-            context.SaveChanges(); // bayi.Id oluşur
+            context.SaveChanges();
 
             // Bayi-Firma ilişkilendirmesi
             var bayiFirma = new BayiFirma

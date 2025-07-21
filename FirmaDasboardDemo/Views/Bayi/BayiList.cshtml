@@ -1,0 +1,204 @@
+﻿@{
+    ViewData["Title"] = "Bayiler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@section Styles {
+    <style>
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Bayi Listesi</h3>
+        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addModal">Yeni Bayi Ekle</button>
+    </div>
+    <div class="card-body">
+        <table id="bayiTable" class="display nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Adres</th>
+                    <th>İl</th>
+                    <th>İlçe</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Aktif</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- ✅ Bayi Ekleme Modalı -->
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="addForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Bayi Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input name="Ad" class="form-control mb-2" placeholder="Ad" required />
+                    <input name="Adres" class="form-control mb-2" placeholder="Adres" />
+                    <input name="Il" class="form-control mb-2" placeholder="İl" />
+                    <input name="Ilce" class="form-control mb-2" placeholder="İlçe" />
+                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" required />
+                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" />
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Kaydet</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ Bayi Güncelleme Modalı -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="editForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bayi Düzenle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="Id" />
+                    <input name="Ad" class="form-control mb-2" placeholder="Ad" required />
+                    <input name="Adres" class="form-control mb-2" placeholder="Adres" />
+                    <input name="Il" class="form-control mb-2" placeholder="İl" />
+                    <input name="Ilce" class="form-control mb-2" placeholder="İlçe" />
+                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" required />
+                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" />
+                    <div class="form-check">
+                        <input type="checkbox" name="AktifMi" class="form-check-input" id="aktifCheck">
+                        <label class="form-check-label" for="aktifCheck">Aktif Mi</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Güncelle</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            const table = $('#bayiTable').DataTable({
+                ajax: {
+                    url: '/Bayi/GetBayiler',
+                    dataSrc: ''
+                },
+                columns: [
+                    { data: 'ad' },
+                    { data: 'adres' },
+                    { data: 'il' },
+                    { data: 'ilce' },
+                    { data: 'email' },
+                    { data: 'telefon' },
+                    {
+                        data: 'aktifMi',
+                        render: data => data ? 'Evet' : 'Hayır'
+                    },
+                    {
+                        data: 'id',
+                        render: id => `
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">Düzenle</button>
+                                <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">Sil</button>
+                            </div>
+                        `,
+                        orderable: false,
+                        searchable: false
+                    }
+                ]
+            });
+
+            // ➕ Yeni bayi ekle
+            $('#addForm').submit(function (e) {
+                e.preventDefault();
+                $.post('/Bayi/AddBayi', $(this).serialize(), function (res) {
+                    if (res.status === "success") {
+                        $('#addModal').modal('hide');
+                        table.ajax.reload();
+                        alert("Bayi eklendi.");
+                    }
+                });
+            });
+
+            // ❌ Bayi sil
+            $('#bayiTable').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+                if (confirm("Bayiyi silmek istiyor musunuz?")) {
+                    $.post('/Bayi/DeleteBayi', { id }, function (res) {
+                        if (res.status === "deleted") {
+                            table.ajax.reload();
+                        }
+                    });
+                }
+            });
+
+            // 🔁 Bayi düzenleme modalını aç
+            $('#bayiTable').on('click', '.edit-btn', function () {
+                const id = $(this).data('id');
+
+                $.get(`/Bayi/GetBayiById?id=${id}`, function (data) {
+                    const form = $('#editForm');
+                    form.find('[name=Id]').val(data.id);
+                    form.find('[name=Ad]').val(data.ad);
+                    form.find('[name=Adres]').val(data.adres);
+                    form.find('[name=Il]').val(data.il);
+                    form.find('[name=Ilce]').val(data.ilce);
+                    form.find('[name=Email]').val(data.email);
+                    form.find('[name=Telefon]').val(data.telefon);
+                    form.find('[name=AktifMi]').prop('checked', data.aktifMi);
+                    $('#editModal').modal('show');
+                });
+            });
+
+            // 🔄 Bayi güncelle
+            $('#editForm').submit(function (e) {
+                e.preventDefault();
+                        // ✅ Doğru kullanım
+        const form = $('#editForm');
+
+        const formData = {
+            Id: form.find('[name=Id]').val(),
+            Ad: form.find('[name=Ad]').val(),
+            Adres: form.find('[name=Adres]').val(),
+            Il: form.find('[name=Il]').val(),
+            Ilce: form.find('[name=Ilce]').val(),
+            Email: form.find('[name=Email]').val(),
+            Telefon: form.find('[name=Telefon]').val(),
+            AktifMi: form.find('[name=AktifMi]').is(':checked')
+        };
+
+
+                       $.ajax({
+            url: '/Bayi/UpdateBayi',
+            method: 'POST',
+            data: JSON.stringify(formData),
+            contentType: 'application/json',
+            success: function (res) {
+                if (res.status === "success") {
+                    $('#editModal').modal('hide');
+                    table.ajax.reload();
+                }
+            }
+        });
+
+            });
+        });
+    </script>
+}

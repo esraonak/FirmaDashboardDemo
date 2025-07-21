@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace FirmaDasboardDemo.Models
 {
@@ -26,6 +27,9 @@ namespace FirmaDasboardDemo.Models
 
         [MaxLength(20)]
         public string Telefon { get; set; }
+        public int RolId { get; set; }
+        [ForeignKey("RolId")]
+        public Rol Rol { get; set; }
 
         [Required]
         [MaxLength(100)]

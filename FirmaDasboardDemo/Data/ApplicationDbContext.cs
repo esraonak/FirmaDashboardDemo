@@ -15,6 +15,7 @@ namespace FirmaDasboardDemo.Data
         public DbSet<FirmaCalisani> FirmaCalisanlari { get; set; }
         public DbSet<Bayi> Bayiler { get; set; }
         public DbSet<BayiFirma> BayiFirmalari { get; set; }
+        public DbSet<Rol> Roller { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

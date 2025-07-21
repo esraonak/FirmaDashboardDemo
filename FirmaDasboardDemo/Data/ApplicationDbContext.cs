@@ -16,6 +16,10 @@ namespace FirmaDasboardDemo.Data
         public DbSet<Bayi> Bayiler { get; set; }
         public DbSet<BayiFirma> BayiFirmalari { get; set; }
         public DbSet<Rol> Roller { get; set; }
+        public DbSet<Urun> Urun { get; set; }
+        public DbSet<FormulTablosu> FormulTablosu { get; set; }
+        public DbSet<Hucre> Hucre { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -34,6 +38,18 @@ namespace FirmaDasboardDemo.Data
                 .HasOne(bf => bf.Firma)
                 .WithMany(f => f.BayiFirmalari)
                 .HasForeignKey(bf => bf.FirmaId);
+            // 🔧 FORMULTABLOSU için ekle
+            modelBuilder.Entity<FormulTablosu>()
+                .HasOne(ft => ft.Urun)
+                .WithMany(u => u.FormulTablolari)
+                .HasForeignKey(ft => ft.UrunId)
+                .OnDelete(DeleteBehavior.Restrict); // ❗ burası hatayı çözer
+
+            modelBuilder.Entity<FormulTablosu>()
+                .HasOne(ft => ft.Calisan)
+                .WithMany()
+                .HasForeignKey(ft => ft.CalisanId)
+                .OnDelete(DeleteBehavior.Restrict); // ❗
         }
     }
 }

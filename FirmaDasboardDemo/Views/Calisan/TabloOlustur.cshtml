@@ -3,134 +3,64 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h3>Yeni Hesaplama Tablosu</h3>
+<h3>Yeni Hesaplama Tablosu (Handsontable)</h3>
 
-<!-- Ürün Seç -->
-<div class="form-group">
-    <label>Ürün Seç</label>
-    <select id="urunSec" class="form-control">
-        @foreach (var urun in ViewBag.Urunler)
-        {
-            <option value="@urun.Id">@urun.Ad</option>
-        }
-    </select>
-</div>
+<div id="hot" style="margin-top: 20px; width: 100%;"></div>
 
-<!-- Tablo Adı -->
-<div class="form-group">
-    <label>Tablo Adı</label>
-    <input id="tabloAdi" class="form-control" placeholder="Örn: Fiyat Tablosu" />
-</div>
-
-<!-- Açıklama -->
-<div class="form-group">
-    <label>Açıklama</label>
-    <textarea id="aciklama" class="form-control" placeholder="İsteğe bağlı açıklama"></textarea>
-</div>
-
-<!-- Tablo Alanı -->
-<div id="tablo" style="margin-top: 20px;"></div>
-
-<!-- Kaydet Butonu -->
 <button class="btn btn-primary mt-3" onclick="kaydet()">Kaydet</button>
 
-<!-- Stil Sorununu Çözmek için -->
-<style>
-    .jss_toolbar {
-        white-space: nowrap;
-        overflow-x: auto;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
+<!-- Stil -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
 
-        .jss_toolbar > div {
-            margin-right: 5px;
-        }
-</style>
+<!-- Script -->
+<script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
-<!-- Gerekli Kütüphaneler (CDN) -->
-<script src="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.js"></script>
-<script src="https://jsuites.net/v5/jsuites.js"></script>
-<link rel="stylesheet" href="https://bossanova.uk/jspreadsheet/v5/jspreadsheet.css" type="text/css" />
-<link rel="stylesheet" href="https://jsuites.net/v5/jsuites.css" type="text/css" />
-
-<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons" />
 <script>
-    let tablo;
+    let hot;
 
     document.addEventListener("DOMContentLoaded", function () {
-        tablo = jspreadsheet(document.getElementById('tablo'), {
-            parseFormulas: true,
-            worksheets: [{
-                worksheetName: 'Hesap',
-                minDimensions: [3, 3],
-                columns: [
-                    { type: 'text', title: 'A', width: 100 },
-                    { type: 'text', title: 'B', width: 100 },
-                    { type: 'text', title: 'C', width: 100 }
-                ],
-                data: [
-                    ["=1+2", "=A1+5", ""],
-                    ["", "=A2+10", ""]
-                ]
-            }]
+        const container = document.getElementById('hot');
+
+        hot = new Handsontable(container, {
+            data: [
+                ['=1+2', '=A1*3', ''],
+                ['', '=A2+5', '']
+            ],
+            rowHeaders: true,
+            colHeaders: ['A', 'B', 'C'],
+            formulas: {
+                engine: HyperFormula
+            },
+            licenseKey: 'non-commercial-and-evaluation' // Ücretsiz kullanım
         });
     });
 
-            function kaydet() {
-        const urunId = document.getElementById('urunSec').value;
-        const tabloAdi = document.getElementById('tabloAdi').value;
-        const aciklama = document.getElementById('aciklama').value;
-
-        // 🧠 Orijinal veri (formüller dahil)
-        const rawData = tablo.options.data;
+    function kaydet() {
+        const formulluVeri = hot.getSourceData(); // =A1+1 gibi formülleri alır
 
         const hucreler = [];
 
-        for (let i = 0; i < rawData.length; i++) {
-            const row = rawData[i];
-            for (let j = 0; j < row.length; j++) {
-                const cell = row[j];
+        formulluVeri.forEach((row, i) => {
+            row.forEach((value, j) => {
                 hucreler.push({
-                    HucreAdi: String.fromCharCode(65 + j) + (i + 1), // Örn: B2
-                    Formul: cell ?? "", // null ya da undefined olursa boş string
-                    IsFormul: typeof cell === "string" && cell.trim().startsWith("=")
-                });
-            }
-        }
-
-         function kaydet() {
-        const rawTableData = tablo.getData(false); // raw (formül) verisi
-        const processedTableData = tablo.getData(); // varsayılan: hesaplanan değerler
-
-        const hucreler = [];
-
-        rawTableData.forEach((row, i) => {
-            row.forEach((cellRaw, j) => {
-                const cellName = String.fromCharCode(65 + j) + (i + 1);
-                hucreler.push({
-                    HucreAdi: cellName,
-                    Formul: cellRaw,
-                    IsFormul: typeof cellRaw === 'string' && cellRaw.trim().startsWith("=")
+                    HucreAdi: String.fromCharCode(65 + j) + (i + 1),
+                    Formul: value,
+                    IsFormul: typeof value === 'string' && value.trim().startsWith("=")
                 });
             });
         });
 
         fetch('/api/tablo/kaydet', {
             method: 'POST',
-            headers: {'Content-Type':'application/json'},
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                UrunId: parseInt(document.getElementById('urunSec').value),
-                TabloAdi: document.getElementById('tabloAdi').value,
-                Aciklama: document.getElementById('aciklama').value,
+                UrunId: 0, // Gerekirse seçilebilir alanla değiştirirsin
+                TabloAdi: "Otomatik Tablo",
+                Aciklama: "Handsontable üzerinden geldi.",
                 Hucreler: hucreler
             })
-        })
-        .then(res => res.json())
-        .then(res => alert("Tablo başarıyla kaydedildi!"));
-    }
-
+        }).then(res => res.json())
+          .then(res => alert("✅ Tablo başarıyla kaydedildi!"));
     }
 </script>
-

@@ -14,6 +14,43 @@ namespace FirmaDasboardDemo.Controllers
         {
             _context = context;
         }
+        [HttpPost]
+        [Route("api/urun/ekle")]
+        public IActionResult UrunEkle([FromBody] UrunEkleDto dto)
+        {
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Unauthorized();
+
+            var urun = new Urun
+            {
+                Ad = dto.Ad,
+                Aciklama = dto.Aciklama,
+                FirmaId = firmaId.Value
+            };
+
+            _context.Urun.Add(urun);
+            _context.SaveChanges();
+
+            return Ok(new { id = urun.Id, ad = urun.Ad });
+        }
+
+
+        [HttpGet]
+        [Route("api/urun/liste")]
+        public IActionResult UrunleriGetir()
+        {
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Unauthorized();
+
+            var urunler = _context.Urun
+                .Where(u => u.FirmaId == firmaId)
+                .Select(u => new { id = u.Id, ad = u.Ad })
+                .ToList();
+
+            return Ok(urunler);
+        }
 
         // GET: /Tablo/TabloOlustur
         [HttpGet]
@@ -44,8 +81,12 @@ namespace FirmaDasboardDemo.Controllers
             if (calisanId == null || firmaId == null)
                 return Unauthorized();
 
-            if (string.IsNullOrWhiteSpace(input.TabloAdi) || input.Hucreler == null || !input.Hucreler.Any())
-                return BadRequest(new { status = "invalid_data", message = "Eksik veri gönderildi." });
+            // ❗️Aynı ürün için daha önce tablo var mı?
+            var mevcut = _context.FormulTablosu.Any(t => t.UrunId == input.UrunId);
+            if (mevcut)
+            {
+                return Ok(new { status = "already_exists" });
+            }
 
             var tablo = new FormulTablosu
             {
@@ -67,5 +108,7 @@ namespace FirmaDasboardDemo.Controllers
 
             return Ok(new { status = "ok", tabloId = tablo.Id });
         }
+
+
     }
 }

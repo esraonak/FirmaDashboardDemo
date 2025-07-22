@@ -3,16 +3,42 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<!-- Ürün Ekle Butonu -->
+<button class="btn btn-success mb-2" onclick="$('#urunEkleModal').modal('show')">+ Ürün Ekle</button>
+
+<!-- Ürün Seç Dropdown -->
+<div class="form-group">
+    <label>Ürün Seç</label>
+    <select id="urunSec" class="form-control"></select>
+</div>
+
+<!-- Ürün Ekle Modal -->
+<div class="modal fade" id="urunEkleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Yeni Ürün Ekle</h5></div>
+            <div class="modal-body">
+                <input type="text" id="yeniUrunAdi" class="form-control mb-2" placeholder="Ürün adı girin" />
+                <textarea id="yeniUrunAciklama" class="form-control" placeholder="Açıklama (isteğe bağlı)"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-primary" onclick="urunEkle()">Ekle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <h3>Yeni Hesaplama Tablosu (Handsontable)</h3>
 
+<!-- Handsontable Alanı -->
 <div id="hot" style="margin-top: 20px; width: 100%;"></div>
 
+<!-- Kaydet Butonu -->
 <button class="btn btn-primary mt-3" onclick="kaydet()">Kaydet</button>
 
-<!-- Stil -->
+<!-- Stil ve Script -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
-
-<!-- Script -->
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
@@ -20,9 +46,8 @@
     let hot;
 
     document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById('hot');
-
-        hot = new Handsontable(container, {
+        // Handsontable başlat
+        hot = new Handsontable(document.getElementById('hot'), {
             data: [
                 ['=1+2', '=A1*3', ''],
                 ['', '=A2+5', '']
@@ -32,13 +57,68 @@
             formulas: {
                 engine: HyperFormula
             },
-            licenseKey: 'non-commercial-and-evaluation' // Ücretsiz kullanım
+            licenseKey: 'non-commercial-and-evaluation'
         });
+
+        // Ürünleri yükle
+        fetch("/api/urun/liste")
+            .then(res => res.json())
+            .then(urunler => {
+                const select = document.getElementById("urunSec");
+                select.innerHTML = "";
+                urunler.forEach(u => {
+                    const opt = document.createElement("option");
+                    opt.value = u.id;
+                    opt.textContent = u.ad;
+                    select.appendChild(opt);
+                });
+            });
     });
 
-    function kaydet() {
-        const formulluVeri = hot.getSourceData(); // =A1+1 gibi formülleri alır
+    // Ürün ekle
+    function urunEkle() {
+        const urunAd = document.getElementById("yeniUrunAdi").value;
+        const urunAciklama = document.getElementById("yeniUrunAciklama").value;
 
+        if (!urunAd.trim()) {
+            alert("Ürün adı boş olamaz.");
+            return;
+        }
+
+        fetch("/api/urun/ekle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                Ad: urunAd,
+                Aciklama: urunAciklama
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.id) {
+                const select = document.getElementById("urunSec");
+                const option = document.createElement("option");
+                option.value = data.id;
+                option.textContent = data.ad;
+                select.appendChild(option);
+                select.value = data.id;
+
+                alert("✅ Ürün başarıyla eklendi: " + data.ad);
+                document.getElementById("yeniUrunAdi").value = "";
+                document.getElementById("yeniUrunAciklama").value = "";
+                $('#urunEkleModal').modal('hide');
+            } else {
+                alert("❌ Ürün eklenirken hata oluştu.");
+            }
+        });
+    }
+
+    // Tabloyu kaydet
+       function kaydet() {
+        const urunId = parseInt(document.getElementById("urunSec").value);
+        if (!urunId) return alert("Lütfen bir ürün seçin.");
+
+        const formulluVeri = hot.getSourceData();
         const hucreler = [];
 
         formulluVeri.forEach((row, i) => {
@@ -55,12 +135,22 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                UrunId: 0, // Gerekirse seçilebilir alanla değiştirirsin
+                UrunId: urunId,
                 TabloAdi: "Otomatik Tablo",
                 Aciklama: "Handsontable üzerinden geldi.",
                 Hucreler: hucreler
             })
-        }).then(res => res.json())
-          .then(res => alert("✅ Tablo başarıyla kaydedildi!"));
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === "ok") {
+                alert("✅ Tablo başarıyla kaydedildi!");
+            } else if (res.status === "already_exists") {
+                alert("⚠️ Bu ürün için zaten bir tablo mevcut. Düzenleme sekmesinden güncelleyebilirsiniz.");
+            } else {
+                alert("❌ Tablo kaydında hata oluştu.");
+            }
+        });
     }
+
 </script>

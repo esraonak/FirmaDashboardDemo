@@ -21,6 +21,12 @@ namespace FirmaDasboardDemo.Controllers
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
+            // 🔁 Aynı adda ürün varsa uyarı dön
+            bool ayniAdVar = _context.Urun.Any(u => u.FirmaId == firmaId && u.Ad.ToLower() == dto.Ad.ToLower());
+            if (ayniAdVar)
+            {
+                return Ok(new { status = "duplicate" });
+            }
 
             var urun = new Urun
             {
@@ -35,7 +41,6 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { id = urun.Id, ad = urun.Ad });
         }
 
-
         [HttpGet]
         [Route("api/urun/liste")]
         public IActionResult UrunleriGetir()
@@ -45,13 +50,12 @@ namespace FirmaDasboardDemo.Controllers
                 return Unauthorized();
 
             var urunler = _context.Urun
-                .Where(u => u.FirmaId == firmaId)
+                .Where(u => u.FirmaId == firmaId && !_context.FormulTablosu.Any(t => t.UrunId == u.Id))
                 .Select(u => new { id = u.Id, ad = u.Ad })
                 .ToList();
 
             return Ok(urunler);
         }
-
         [HttpGet]
         [Route("api/urun/tabloluurun")]
         public IActionResult TablosuOlanUrunleriGetir()
@@ -180,7 +184,72 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { status = "ok" });
         }
 
+        [HttpGet]
+        public IActionResult TabloSil()
+        {
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return RedirectToAction("Login", "Calisan");
 
+            var tablolar = _context.FormulTablosu
+                .Include(t => t.Urun)
+                .Where(t => t.Urun.FirmaId == firmaId)
+                .Select(t => new {
+                    Id = t.Id,
+                    Ad = t.Ad,
+                    UrunAd = t.Urun.Ad
+                })
+                .ToList();
+
+            ViewBag.Tablolar = tablolar;
+
+            return View("~/Views/Calisan/TabloSil.cshtml");
+        }
+
+        [HttpPost]
+        public IActionResult TabloSilOnayla(int id)
+        {
+            var tablo = _context.FormulTablosu
+                .Include(t => t.Hucreler)
+                .FirstOrDefault(t => t.Id == id);
+
+            if (tablo == null)
+                return NotFound();
+
+            _context.Hucre.RemoveRange(tablo.Hucreler); // önce bağlı hücreleri sil
+            _context.FormulTablosu.Remove(tablo);       // sonra tabloyu sil
+            _context.SaveChanges();
+
+            TempData["SilmeMesaji"] = "✅ Tablo başarıyla silindi.";
+            return RedirectToAction("TabloSil");
+        }
+        [HttpDelete]
+        [Route("api/urun/sil/{id}")]
+        public IActionResult UrunSil(int id)
+        {
+            var urun = _context.Urun
+                .Include(u => u.FormulTablolari)
+                .FirstOrDefault(u => u.Id == id);
+
+            if (urun == null)
+                return NotFound(new { status = "not_found" });
+
+            // Eğer ürünün FormulTablosu varsa ilişkili tablolarla birlikte sil (isteğe bağlı)
+            if (urun.FormulTablolari != null && urun.FormulTablolari.Any())
+            {
+                foreach (var tablo in urun.FormulTablolari)
+                {
+                    var hucreler = _context.Hucre.Where(h => h.TabloId == tablo.Id);
+                    _context.Hucre.RemoveRange(hucreler);
+                    _context.FormulTablosu.Remove(tablo);
+                }
+            }
+
+            _context.Urun.Remove(urun);
+            _context.SaveChanges();
+
+            return Ok(new { status = "ok" });
+        }
 
 
     }

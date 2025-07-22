@@ -1,0 +1,36 @@
+﻿@{
+    ViewData["Title"] = "Tablo Sil";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h3>Mevcut Tablolar</h3>
+
+@if (TempData["SilmeMesaji"] != null)
+{
+    <div class="alert alert-success">@TempData["SilmeMesaji"]</div>
+}
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Ürün</th>
+            <th>Tablo Adı</th>
+            <th>İşlem</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var t in ViewBag.Tablolar)
+        {
+            <tr>
+                <td>@t.UrunAd</td>
+                <td>@t.Ad</td>
+                <td>
+                    <form method="post" action="/Tablo/TabloSilOnayla/@t.Id"
+                          onsubmit="return confirm('Bu tabloyu silmek istediğinizden emin misiniz?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Sil</button>
+                    </form>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

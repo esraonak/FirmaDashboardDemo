@@ -4,7 +4,12 @@
 }
 
 <!-- Ürün Ekle Butonu -->
-<button class="btn btn-success mb-2" onclick="$('#urunEkleModal').modal('show')">+ Ürün Ekle</button>
+<!-- Ürün İşlem Butonları -->
+<div class="mb-2">
+    <button class="btn btn-success" onclick="$('#urunEkleModal').modal('show')">+ Ürün Ekle</button>
+    <button class="btn btn-danger" onclick="urunSil()">– Ürün Sil</button>
+</div>
+
 
 <!-- Ürün Seç Dropdown -->
 <div class="form-group">
@@ -22,7 +27,7 @@
                 <textarea id="yeniUrunAciklama" class="form-control" placeholder="Açıklama (isteğe bağlı)"></textarea>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button class="btn btn-secondary" data-dismiss="modal">İptal</button>
                 <button class="btn btn-primary" onclick="urunEkle()">Ekle</button>
             </div>
         </div>
@@ -81,6 +86,29 @@
             });
     });
 
+    //urunsİL
+    function urunSil() {
+        const urunId = document.getElementById("urunSec").value;
+        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
+
+        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+
+        fetch(`/api/urun/sil/${urunId}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "ok") {
+                alert("✅ Ürün silindi.");
+
+                // Dropdown'dan ürünü kaldır
+                const select = document.getElementById("urunSec");
+                select.querySelector(`option[value="${urunId}"]`)?.remove();
+            } else {
+                alert("❌ Ürün silinirken hata oluştu.");
+            }
+        });
+    }
     // Ürün ekle
     function urunEkle() {
         const urunAd = document.getElementById("yeniUrunAdi").value;
@@ -114,28 +142,44 @@
                 document.getElementById("yeniUrunAciklama").value = "";
                 $('#urunEkleModal').modal('hide');
             } else {
-                alert("❌ Ürün eklenirken hata oluştu.");
+                alert("❌ Ürün eklenirken hata oluştu.Aynı isimde urunEkle olabılır");
             }
         });
     }
 
     // Tabloyu kaydet
-    function kaydet() {
-        const urunId = parseInt(document.getElementById("urunSec").value);
-        if (!urunId) return alert("Lütfen bir ürün seçin.");
+          function kaydet() {
+        const urunSelect = document.getElementById("urunSec");
+        if (!urunSelect || !urunSelect.value) {
+            alert("Lütfen bir ürün seçin.");
+            return;
+        }
+
+        const urunId = parseInt(urunSelect.value);
+        const urunAd = urunSelect.options[urunSelect.selectedIndex].text;
+
+        if (isNaN(urunId)) {
+            alert("Geçersiz ürün seçimi.");
+            return;
+        }
 
         const formulluVeri = hot.getSourceData();
+        if (!formulluVeri || formulluVeri.length === 0) {
+            alert("Tablo verisi boş. Lütfen veri giriniz.");
+            return;
+        }
+
         const hucreler = [];
 
         formulluVeri.forEach((row, i) => {
+            if (!Array.isArray(row)) return;
             row.forEach((value, j) => {
-                if (value !== null && value !== "") {
-                    hucreler.push({
-                        HucreAdi: String.fromCharCode(65 + j) + (i + 1),
-                        Formul: value,
-                        IsFormul: typeof value === 'string' && value.trim().startsWith("=")
-                    });
-                }
+                const hucreAdi = String.fromCharCode(65 + j) + (i + 1);
+                hucreler.push({
+                    HucreAdi: hucreAdi,
+                    Formul: value,
+                    IsFormul: typeof value === 'string' && value.trim().startsWith("=")
+                });
             });
         });
 
@@ -144,8 +188,8 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 UrunId: urunId,
-                TabloAdi: "Otomatik Tablo",
-                Aciklama: "Handsontable üzerinden geldi.",
+                TabloAdi: `${urunAd} TABLOSU`,
+                Aciklama: `${urunAd} üzerinden oluşturuldu.`,
                 Hucreler: hucreler
             })
         })
@@ -158,6 +202,11 @@
             } else {
                 alert("❌ Tablo kaydında hata oluştu.");
             }
+        })
+        .catch(err => {
+            console.error("Hata:", err);
+            alert("❌ Sunucuya bağlanırken hata oluştu.");
         });
     }
+
 </script>

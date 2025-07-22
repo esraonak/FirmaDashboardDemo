@@ -1,0 +1,108 @@
+﻿@{
+    ViewData["Title"] = "Tablo Düzenle";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<h3>Tablo Düzenle</h3>
+
+<!-- Ürün Seçimi -->
+<div class="form-group">
+    <label>Ürün Seç</label>
+    <select id="urunSec" class="form-control"></select>
+</div>
+
+<!-- Handsontable Alanı -->
+<div id="hot" style="margin-top: 20px;"></div>
+
+<!-- Kaydet Butonu -->
+<button class="btn btn-primary mt-3" onclick="guncelle()">Kaydet</button>
+
+<!-- Handsontable CDN -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
+
+<script>
+    let hot;
+    let seciliTabloId = null;
+
+    // Ürün dropdown doldur
+    document.addEventListener("DOMContentLoaded", function () {
+        fetch("/api/urun/tabloluurun")
+            .then(res => res.json())
+            .then(urunler => {
+                const select = document.getElementById("urunSec");
+                select.innerHTML = "";
+                urunler.forEach(u => {
+                    const opt = document.createElement("option");
+                    opt.value = u.id;
+                    opt.textContent = u.ad;
+                    select.appendChild(opt);
+                });
+
+                select.addEventListener("change", tabloyuGetir);
+                select.dispatchEvent(new Event("change"));
+            });
+    });
+
+    function tabloyuGetir() {
+        const urunId = document.getElementById("urunSec").value;
+        fetch(`/Tablo/VeriGetir?urunId=${urunId}`)
+            .then(res => res.json())
+            .then(data => {
+                seciliTabloId = data.tabloId;
+                const rows = [];
+
+                data.hucreler.forEach(h => {
+                    const row = parseInt(h.hucreAdi.slice(1)) - 1;
+                    const col = h.hucreAdi.charCodeAt(0) - 65;
+                    rows[row] = rows[row] || [];
+                    rows[row][col] = h.formul;
+                });
+
+                // HOT başlat
+                const container = document.getElementById("hot");
+                if (hot) hot.destroy();
+
+                hot = new Handsontable(container, {
+                    data: rows,
+                    rowHeaders: true,
+                    colHeaders: ['A', 'B', 'C', 'D', 'E'],
+                    formulas: {
+                        engine: HyperFormula
+                    },
+                    licenseKey: 'non-commercial-and-evaluation'
+                });
+            });
+    }
+
+    function guncelle() {
+        if (!seciliTabloId) return alert("Tablo yüklenemedi.");
+
+        const formulluVeri = hot.getSourceData();
+        const hucreler = [];
+
+        formulluVeri.forEach((row, i) => {
+            row.forEach((value, j) => {
+                hucreler.push({
+                    HucreAdi: String.fromCharCode(65 + j) + (i + 1),
+                    Formul: value,
+                    IsFormul: typeof value === 'string' && value.trim().startsWith("=")
+                });
+            });
+        });
+
+        fetch('/Tablo/Guncelle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                TabloId: seciliTabloId,
+                Hucreler: hucreler
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === "ok") alert("✅ Güncellendi!");
+            else alert("❌ Hata oluştu!");
+        });
+    }
+</script>

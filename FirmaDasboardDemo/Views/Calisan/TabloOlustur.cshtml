@@ -46,14 +46,20 @@
     let hot;
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Handsontable başlat
-        hot = new Handsontable(document.getElementById('hot'), {
+        const container = document.getElementById('hot');
+
+         hot = new Handsontable(document.getElementById('hot'), {
             data: [
                 ['=1+2', '=A1*3', ''],
                 ['', '=A2+5', '']
             ],
             rowHeaders: true,
-            colHeaders: ['A', 'B', 'C'],
+            //colHeaders: ['A', 'B', 'C'],
+            colHeaders: true,
+            minSpareCols: 1, // automatisch eine leere Spalte extra
+            allowInsertColumn: true,
+            minSpareRows: 1,     // Immer 1 leere Zeile am Ende verfügbar
+            allowInsertRow: true, // Benutzer darf Zeilen einfügen
             formulas: {
                 engine: HyperFormula
             },
@@ -114,7 +120,7 @@
     }
 
     // Tabloyu kaydet
-       function kaydet() {
+    function kaydet() {
         const urunId = parseInt(document.getElementById("urunSec").value);
         if (!urunId) return alert("Lütfen bir ürün seçin.");
 
@@ -123,11 +129,13 @@
 
         formulluVeri.forEach((row, i) => {
             row.forEach((value, j) => {
-                hucreler.push({
-                    HucreAdi: String.fromCharCode(65 + j) + (i + 1),
-                    Formul: value,
-                    IsFormul: typeof value === 'string' && value.trim().startsWith("=")
-                });
+                if (value !== null && value !== "") {
+                    hucreler.push({
+                        HucreAdi: String.fromCharCode(65 + j) + (i + 1),
+                        Formul: value,
+                        IsFormul: typeof value === 'string' && value.trim().startsWith("=")
+                    });
+                }
             });
         });
 
@@ -152,5 +160,4 @@
             }
         });
     }
-
 </script>

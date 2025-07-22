@@ -52,6 +52,23 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(urunler);
         }
 
+        [HttpGet]
+        [Route("api/urun/tabloluurun")]
+        public IActionResult TablosuOlanUrunleriGetir()
+        {
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Unauthorized();
+
+            // ❗️Sadece FormulTablosu kaydı olan ürünleri getir
+            var urunler = _context.Urun
+                .Where(u => u.FirmaId == firmaId && _context.FormulTablosu.Any(t => t.UrunId == u.Id))
+                .Select(u => new { id = u.Id, ad = u.Ad })
+                .ToList();
+
+            return Ok(urunler);
+        }
+
         // GET: /Tablo/TabloOlustur
         [HttpGet]
         public IActionResult TabloOlustur()
@@ -108,6 +125,62 @@ namespace FirmaDasboardDemo.Controllers
 
             return Ok(new { status = "ok", tabloId = tablo.Id });
         }
+
+        [HttpGet]
+        public IActionResult TabloDuzenle()
+        {
+            return View("~/Views/Calisan/TabloDuzenle.cshtml"); // otomatik olarak Views/Tablo/TabloDuzenle.cshtml'yi bulur
+        }
+        [HttpGet]
+        public IActionResult VeriGetir(int urunId)
+        {
+            var firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null) return Unauthorized();
+
+            var tablo = _context.FormulTablosu
+                .Include(t => t.Hucreler)
+                .FirstOrDefault(t => t.UrunId == urunId && t.Urun.FirmaId == firmaId);
+
+            if (tablo == null)
+                return NotFound(new { status = "not_found" });
+
+            var hucreler = tablo.Hucreler.Select(h => new
+            {
+                h.HucreAdi,
+                h.Formul,
+                h.IsFormul
+            });
+
+            return Json(new { tabloId = tablo.Id, hucreler });
+        }
+
+        [HttpPost]
+        public IActionResult Guncelle([FromBody] TabloKayitDto dto)
+        {
+            var tablo = _context.FormulTablosu
+                .Include(t => t.Hucreler)
+                .FirstOrDefault(t => t.Id == dto.TabloId);
+
+            if (tablo == null)
+                return NotFound(new { status = "not_found" });
+
+            // Eski hücreleri sil
+            _context.Hucre.RemoveRange(tablo.Hucreler);
+
+            // Yeni hücreleri ekle
+            tablo.Hucreler = dto.Hucreler.Select(h => new Hucre
+            {
+                HucreAdi = h.HucreAdi,
+                Formul = h.Formul ?? "",
+                IsFormul = h.IsFormul
+            }).ToList();
+
+            _context.SaveChanges();
+
+            return Ok(new { status = "ok" });
+        }
+
+
 
 
     }

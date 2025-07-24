@@ -66,10 +66,12 @@
                 hot = new Handsontable(container, {
                     data: rows,
                     rowHeaders: true,
-                    colHeaders: ['A', 'B', 'C', 'D', 'E'],
-                    formulas: {
-                        engine: HyperFormula
-                    },
+                    colHeaders: true,
+                    minSpareCols: 1, // automatisch eine leere Spalte extra
+                    allowInsertColumn: true,
+                    minSpareRows: 1,     // Immer 1 leere Zeile am Ende verfügbar
+                    allowInsertRow: true, // Benutzer darf Zeilen einfügen
+                    formulas: { engine: HyperFormula },
                     licenseKey: 'non-commercial-and-evaluation'
                 });
             });

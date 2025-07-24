@@ -56,177 +56,6 @@
     <button onclick="setMarkingMode('hidden')" class="btn btn-danger">Unsichtbar markieren</button>
 </div>
 
-<!--
-<script>
-    let hot;
-    let metaDataMap = {}; // Hücre bazlı görünürlük ve giriş kontrolü için
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById('hot');
-
-        hot = new Handsontable(document.getElementById('hot'), {
-            data: [ ['','',''],
-                    ['','',''],
-                    ['','','']],
-            rowHeaders: true,
-            colHeaders: true,
-            minSpareCols: 1,
-            minSpareRows: 1,
-            allowInsertColumn: true,
-            allowInsertRow: true,
-            formulas: { engine: HyperFormula },
-            contextMenu: {
-                items: {
-                        "gozuksun": {
-        name: "🟢 Bayi Görebilsin",
-        callback: function () {
-            const coords = hot.getSelectedLast();
-            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
-            const row = coords[0];
-            const col = coords[1];
-            const cell = String.fromCharCode(65 + col) + (row + 1);
-
-            metaDataMap[cell] = metaDataMap[cell] || {};
-            metaDataMap[cell].GozuksunMu = !(metaDataMap[cell].GozuksunMu ?? false);
-            alert(`${cell} için Gözükme durumu: ${metaDataMap[cell].GozuksunMu}`);
-        }
-    },
-    "girebilir": {
-        name: "✍️ Bayi Değer Girebilsin",
-        callback: function () {
-            const coords = hot.getSelectedLast();
-            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
-            const row = coords[0];
-            const col = coords[1];
-            const cell = String.fromCharCode(65 + col) + (row + 1);
-
-            metaDataMap[cell] = metaDataMap[cell] || {};
-            metaDataMap[cell].GirdimiYapabilir = !(metaDataMap[cell].GirdimiYapabilir ?? false);
-            alert(`${cell} için Giriş izni: ${metaDataMap[cell].GirdimiYapabilir}`);
-        }
-    }
-    ,
-                    "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
-                    ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
-                }
-            },
-            licenseKey: 'non-commercial-and-evaluation'
-        });
-
-        fetch("/api/urun/liste")
-            .then(res => res.json())
-            .then(urunler => {
-                const select = document.getElementById("urunSec");
-                select.innerHTML = "";
-                urunler.forEach(u => {
-                    const opt = document.createElement("option");
-                    opt.value = u.id;
-                    opt.textContent = u.ad;
-                    select.appendChild(opt);
-                });
-            });
-    });
-
-    function getCellId(coords) {
-        if (!coords || typeof coords.row !== "number" || typeof coords.col !== "number") {
-            console.warn("Geçersiz hücre koordinatı:", coords);
-            return null;
-        }
-        return String.fromCharCode(65 + coords.col) + (coords.row + 1);
-    }
-
-    function urunSil() {
-        const urunId = document.getElementById("urunSec").value;
-        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
-        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
-
-        fetch(`/api/urun/sil/${urunId}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === "ok") {
-                    alert("✅ Ürün silindi.");
-                    document.querySelector(`#urunSec option[value="${urunId}"]`).remove();
-                } else {
-                    alert("❌ Ürün silinemedi.");
-                }
-            });
-    }
-
-    function urunEkle() {
-        const ad = document.getElementById("yeniUrunAdi").value.trim();
-        const aciklama = document.getElementById("yeniUrunAciklama").value;
-
-        if (!ad) return alert("Ürün adı boş olamaz.");
-
-        fetch("/api/urun/ekle", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ Ad: ad, Aciklama: aciklama })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.id) {
-                const opt = new Option(data.ad, data.id);
-                document.getElementById("urunSec").appendChild(opt);
-                alert("✅ Ürün eklendi: " + data.ad);
-                document.getElementById("yeniUrunAdi").value = "";
-                document.getElementById("yeniUrunAciklama").value = "";
-                $('#urunEkleModal').modal('hide');
-            } else {
-                alert("❌ Ürün eklenemedi. Aynı isimde olabilir.");
-            }
-        });
-    }
-
-    function kaydet() {
-        const urunSelect = document.getElementById("urunSec");
-        const urunId = parseInt(urunSelect.value);
-        const urunAd = urunSelect.options[urunSelect.selectedIndex].text;
-        if (!urunId || isNaN(urunId)) return alert("Lütfen bir ürün seçin.");
-
-        const formulluVeri = hot.getSourceData();
-        const hucreler = [];
-
-        formulluVeri.forEach((row, i) => {
-            row.forEach((val, j) => {
-                const hAd = String.fromCharCode(65 + j) + (i + 1);
-                const meta = metaDataMap[hAd] || {};
-                hucreler.push({
-                    HucreAdi: hAd,
-                    Formul: val,
-                    IsFormul: typeof val === 'string' && val.trim().startsWith("="),
-                    GozuksunMu: meta.GozuksunMu === true,
-                    GirdimiYapabilir: meta.GirdimiYapabilir === true
-                });
-            });
-        });
-
-        console.table(metaDataMap); // ✅ Kontrol için
-
-        fetch('/api/tablo/kaydet', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                UrunId: urunId,
-                TabloAdi: `${urunAd} TABLOSU`,
-                Aciklama: `${urunAd} üzerinden oluşturuldu.`,
-                Hucreler: hucreler
-            })
-        })
-        .then(res => res.json())
-        .then(res => {
-            if (res.status === "ok") alert("✅ Tablo kaydedildi!");
-            else if (res.status === "already_exists") alert("⚠️ Zaten tablo var.");
-            else alert("❌ Hata oluştu.");
-        })
-        .catch(err => {
-            console.error(err);
-            alert("❌ Sunucu hatası!");
-        });
-    }
-
-</script>
--->
 
 <script>
     let hot;
@@ -235,9 +64,9 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         hot = new Handsontable(document.getElementById('hot'), {
-            data: [ ['','',''],
-                    ['','',''],
-                    ['','','']],
+            data: [['','',''],
+                   ['','',''],
+                   ['','','']],
             rowHeaders: true,
             colHeaders: true,
             minSpareCols: 1, // automatisch eine leere Spalte extra
@@ -300,8 +129,8 @@
                     HucreAdi: hucreAdi,
                     Formul: val,
                     IsFormul: typeof val === 'string' && val.trim().startsWith("="),
-                    Editable: props.editable || false,
-                    Visible: props.visible !== false // default true
+                    GirdimiYapabilir: props.editable || false,
+                    GozuksunMu: props.visible !== false // default true
                 });
             });
         });

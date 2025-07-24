@@ -14,6 +14,10 @@ public class Hucre
 
     public bool IsFormul { get; set; }
 
+    // Yeni alanlar:
+    public bool GozuksunMu { get; set; } // Bayi bu hücreyi görebilir mi?
+    public bool GirdimiYapabilir { get; set; } // Bayi bu hücreye değer girebilir mi?
+
     // Bağlı olduğu tablo
     public int TabloId { get; set; }
     [ForeignKey("TabloId")]

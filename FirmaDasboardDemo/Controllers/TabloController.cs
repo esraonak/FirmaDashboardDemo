@@ -102,7 +102,7 @@ namespace FirmaDasboardDemo.Controllers
             if (calisanId == null || firmaId == null)
                 return Unauthorized();
 
-            // ❗️Aynı ürün için daha önce tablo var mı?
+            // Aynı ürün için tablo var mı kontrol
             var mevcut = _context.FormulTablosu.Any(t => t.UrunId == input.UrunId);
             if (mevcut)
             {
@@ -120,7 +120,10 @@ namespace FirmaDasboardDemo.Controllers
                 {
                     HucreAdi = h.HucreAdi,
                     Formul = h.Formul ?? "",
-                    IsFormul = h.IsFormul
+                    IsFormul = h.IsFormul,
+                    // Girebilir olan hücre otomatik olarak görünür olacak
+                    GozuksunMu = h.GirdimiYapabilir ? true : h.GozuksunMu,
+                    GirdimiYapabilir = h.GirdimiYapabilir
                 }).ToList()
             };
 
@@ -129,6 +132,7 @@ namespace FirmaDasboardDemo.Controllers
 
             return Ok(new { status = "ok", tabloId = tablo.Id });
         }
+
 
         [HttpGet]
         public IActionResult TabloDuzenle()
@@ -152,7 +156,9 @@ namespace FirmaDasboardDemo.Controllers
             {
                 h.HucreAdi,
                 h.Formul,
-                h.IsFormul
+                h.IsFormul,
+                h.GozuksunMu,
+                h.GirdimiYapabilir
             });
 
             return Json(new { tabloId = tablo.Id, hucreler });
@@ -168,21 +174,22 @@ namespace FirmaDasboardDemo.Controllers
             if (tablo == null)
                 return NotFound(new { status = "not_found" });
 
-            // Eski hücreleri sil
             _context.Hucre.RemoveRange(tablo.Hucreler);
 
-            // Yeni hücreleri ekle
             tablo.Hucreler = dto.Hucreler.Select(h => new Hucre
             {
                 HucreAdi = h.HucreAdi,
                 Formul = h.Formul ?? "",
-                IsFormul = h.IsFormul
+                IsFormul = h.IsFormul,
+                GozuksunMu = h.GirdimiYapabilir ? true : h.GozuksunMu,
+                GirdimiYapabilir = h.GirdimiYapabilir
             }).ToList();
 
             _context.SaveChanges();
 
             return Ok(new { status = "ok" });
         }
+
 
         [HttpGet]
         public IActionResult TabloSil()

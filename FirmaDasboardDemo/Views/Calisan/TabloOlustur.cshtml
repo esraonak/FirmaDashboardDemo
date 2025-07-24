@@ -3,13 +3,11 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- Ürün Ekle Butonu -->
 <!-- Ürün İşlem Butonları -->
 <div class="mb-2">
     <button class="btn btn-success" onclick="$('#urunEkleModal').modal('show')">+ Ürün Ekle</button>
     <button class="btn btn-danger" onclick="urunSil()">– Ürün Sil</button>
 </div>
-
 
 <!-- Ürün Seç Dropdown -->
 <div class="form-group">
@@ -17,7 +15,7 @@
     <select id="urunSec" class="form-control"></select>
 </div>
 
-<!-- Ürün Ekle Modal -->
+<!-- Modal -->
 <div class="modal fade" id="urunEkleModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -35,43 +33,65 @@
 </div>
 
 <h3>Yeni Hesaplama Tablosu (Handsontable)</h3>
-
-<!-- Handsontable Alanı -->
 <div id="hot" style="margin-top: 20px; width: 100%;"></div>
-
-<!-- Kaydet Butonu -->
 <button class="btn btn-primary mt-3" onclick="kaydet()">Kaydet</button>
 
-<!-- Stil ve Script -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
 <script>
     let hot;
+    let metaDataMap = {}; // Hücre bazlı görünürlük ve giriş kontrolü için
 
     document.addEventListener("DOMContentLoaded", function () {
-        const container = document.getElementById('hot');
-
-         hot = new Handsontable(document.getElementById('hot'), {
-            data: [
-                ['=1+2', '=A1*3', ''],
-                ['', '=A2+5', '']
-            ],
+        hot = new Handsontable(document.getElementById('hot'), {
+            data: [['=1+2', '=A1*3'], ['=A2+5', '']],
             rowHeaders: true,
-            //colHeaders: ['A', 'B', 'C'],
             colHeaders: true,
-            minSpareCols: 1, // automatisch eine leere Spalte extra
+            minSpareCols: 1,
+            minSpareRows: 1,
             allowInsertColumn: true,
-            minSpareRows: 1,     // Immer 1 leere Zeile am Ende verfügbar
-            allowInsertRow: true, // Benutzer darf Zeilen einfügen
-            formulas: {
-                engine: HyperFormula
+            allowInsertRow: true,
+            formulas: { engine: HyperFormula },
+            contextMenu: {
+                items: {
+                        "gozuksun": {
+        name: "🟢 Bayi Görebilsin",
+        callback: function () {
+            const coords = hot.getSelectedLast();
+            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
+            const row = coords[0];
+            const col = coords[1];
+            const cell = String.fromCharCode(65 + col) + (row + 1);
+
+            metaDataMap[cell] = metaDataMap[cell] || {};
+            metaDataMap[cell].GozuksunMu = !(metaDataMap[cell].GozuksunMu ?? false);
+            alert(`${cell} için Gözükme durumu: ${metaDataMap[cell].GozuksunMu}`);
+        }
+    },
+    "girebilir": {
+        name: "✍️ Bayi Değer Girebilsin",
+        callback: function () {
+            const coords = hot.getSelectedLast();
+            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
+            const row = coords[0];
+            const col = coords[1];
+            const cell = String.fromCharCode(65 + col) + (row + 1);
+
+            metaDataMap[cell] = metaDataMap[cell] || {};
+            metaDataMap[cell].GirdimiYapabilir = !(metaDataMap[cell].GirdimiYapabilir ?? false);
+            alert(`${cell} için Giriş izni: ${metaDataMap[cell].GirdimiYapabilir}`);
+        }
+    }
+    ,
+                    "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
+                    ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
+                }
             },
             licenseKey: 'non-commercial-and-evaluation'
         });
 
-        // Ürünleri yükle
         fetch("/api/urun/liste")
             .then(res => res.json())
             .then(urunler => {
@@ -86,102 +106,81 @@
             });
     });
 
-    //urunsİL
+    function getCellId(coords) {
+        if (!coords || typeof coords.row !== "number" || typeof coords.col !== "number") {
+            console.warn("Geçersiz hücre koordinatı:", coords);
+            return null;
+        }
+        return String.fromCharCode(65 + coords.col) + (coords.row + 1);
+    }
+
     function urunSil() {
         const urunId = document.getElementById("urunSec").value;
         if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
-
         if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
 
-        fetch(`/api/urun/sil/${urunId}`, {
-            method: 'DELETE'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === "ok") {
-                alert("✅ Ürün silindi.");
-
-                // Dropdown'dan ürünü kaldır
-                const select = document.getElementById("urunSec");
-                select.querySelector(`option[value="${urunId}"]`)?.remove();
-            } else {
-                alert("❌ Ürün silinirken hata oluştu.");
-            }
-        });
+        fetch(`/api/urun/sil/${urunId}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    alert("✅ Ürün silindi.");
+                    document.querySelector(`#urunSec option[value="${urunId}"]`).remove();
+                } else {
+                    alert("❌ Ürün silinemedi.");
+                }
+            });
     }
-    // Ürün ekle
-    function urunEkle() {
-        const urunAd = document.getElementById("yeniUrunAdi").value;
-        const urunAciklama = document.getElementById("yeniUrunAciklama").value;
 
-        if (!urunAd.trim()) {
-            alert("Ürün adı boş olamaz.");
-            return;
-        }
+    function urunEkle() {
+        const ad = document.getElementById("yeniUrunAdi").value.trim();
+        const aciklama = document.getElementById("yeniUrunAciklama").value;
+
+        if (!ad) return alert("Ürün adı boş olamaz.");
 
         fetch("/api/urun/ekle", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                Ad: urunAd,
-                Aciklama: urunAciklama
-            })
+            body: JSON.stringify({ Ad: ad, Aciklama: aciklama })
         })
         .then(res => res.json())
         .then(data => {
             if (data.id) {
-                const select = document.getElementById("urunSec");
-                const option = document.createElement("option");
-                option.value = data.id;
-                option.textContent = data.ad;
-                select.appendChild(option);
-                select.value = data.id;
-
-                alert("✅ Ürün başarıyla eklendi: " + data.ad);
+                const opt = new Option(data.ad, data.id);
+                document.getElementById("urunSec").appendChild(opt);
+                alert("✅ Ürün eklendi: " + data.ad);
                 document.getElementById("yeniUrunAdi").value = "";
                 document.getElementById("yeniUrunAciklama").value = "";
                 $('#urunEkleModal').modal('hide');
             } else {
-                alert("❌ Ürün eklenirken hata oluştu.Aynı isimde urunEkle olabılır");
+                alert("❌ Ürün eklenemedi. Aynı isimde olabilir.");
             }
         });
     }
 
-    // Tabloyu kaydet
-          function kaydet() {
+    function kaydet() {
         const urunSelect = document.getElementById("urunSec");
-        if (!urunSelect || !urunSelect.value) {
-            alert("Lütfen bir ürün seçin.");
-            return;
-        }
-
         const urunId = parseInt(urunSelect.value);
         const urunAd = urunSelect.options[urunSelect.selectedIndex].text;
-
-        if (isNaN(urunId)) {
-            alert("Geçersiz ürün seçimi.");
-            return;
-        }
+        if (!urunId || isNaN(urunId)) return alert("Lütfen bir ürün seçin.");
 
         const formulluVeri = hot.getSourceData();
-        if (!formulluVeri || formulluVeri.length === 0) {
-            alert("Tablo verisi boş. Lütfen veri giriniz.");
-            return;
-        }
-
         const hucreler = [];
 
         formulluVeri.forEach((row, i) => {
-            if (!Array.isArray(row)) return;
-            row.forEach((value, j) => {
-                const hucreAdi = String.fromCharCode(65 + j) + (i + 1);
+            row.forEach((val, j) => {
+                const hAd = String.fromCharCode(65 + j) + (i + 1);
+                const meta = metaDataMap[hAd] || {};
                 hucreler.push({
-                    HucreAdi: hucreAdi,
-                    Formul: value,
-                    IsFormul: typeof value === 'string' && value.trim().startsWith("=")
+                    HucreAdi: hAd,
+                    Formul: val,
+                    IsFormul: typeof val === 'string' && val.trim().startsWith("="),
+                    GozuksunMu: meta.GozuksunMu === true,
+                    GirdimiYapabilir: meta.GirdimiYapabilir === true
                 });
             });
         });
+
+        console.table(metaDataMap); // ✅ Kontrol için
 
         fetch('/api/tablo/kaydet', {
             method: 'POST',
@@ -195,18 +194,15 @@
         })
         .then(res => res.json())
         .then(res => {
-            if (res.status === "ok") {
-                alert("✅ Tablo başarıyla kaydedildi!");
-            } else if (res.status === "already_exists") {
-                alert("⚠️ Bu ürün için zaten bir tablo mevcut. Düzenleme sekmesinden güncelleyebilirsiniz.");
-            } else {
-                alert("❌ Tablo kaydında hata oluştu.");
-            }
+            if (res.status === "ok") alert("✅ Tablo kaydedildi!");
+            else if (res.status === "already_exists") alert("⚠️ Zaten tablo var.");
+            else alert("❌ Hata oluştu.");
         })
         .catch(err => {
-            console.error("Hata:", err);
-            alert("❌ Sunucuya bağlanırken hata oluştu.");
+            console.error(err);
+            alert("❌ Sunucu hatası!");
         });
     }
-
 </script>
+
+

@@ -1,0 +1,176 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Bayi Paneli";
+}
+
+<section class="content-header">
+    <div class="container-fluid">
+        <h1>Bayi Paneli</h1>
+    </div>
+</section>
+
+<section class="content">
+    <div class="container-fluid">
+
+        <!-- Firma ve Ürün Seçimi -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Firma ve Ürün Seç</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="firmaSec">Firma Seç:</label>
+                    <select id="firmaSec" class="form-control"></select>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label for="urunSec">Ürün Seç:</label>
+                    <select id="urunSec" class="form-control"></select>
+                </div>
+
+                <button class="btn btn-primary mt-2" onclick="tabloyuGetir()">ÖLCÜ GİR</button>
+            </div>
+        </div>
+
+        <!-- Tablo Görüntüleme -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <strong>Ürün Hesaplama Tablosu</strong>
+            </div>
+            <div class="card-body">
+                <div id="hot" style="width: 100%; overflow-x: auto;"></div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<!-- Handsontable -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
+
+<script>
+    let hot;
+    let aktifUrunId = null;
+    let hucreMetalar = [];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        hot = new Handsontable(document.getElementById('hot'), {
+            data: [],
+            rowHeaders: true,
+            colHeaders: true,
+            height: 'auto',
+            licenseKey: 'non-commercial-and-evaluation',
+            formulas: {
+                engine: HyperFormula
+            },
+            afterChange: function (changes, source) {
+                if (source === 'loadData' || !changes) return;
+                // ✅ Arka planda formüller kendiliğinden hesaplanacak
+            }
+        });
+
+        fetch("/BayiSayfasi/GetFirmalarim")
+            .then(res => res.ok ? res.json() : [])
+            .then(firmalar => {
+                const firmaSelect = document.getElementById("firmaSec");
+                firmaSelect.innerHTML = "<option disabled selected>Firma seçiniz</option>";
+                firmalar.forEach(f => {
+                    const opt = document.createElement("option");
+                    opt.value = f.id;
+                    opt.textContent = f.ad;
+                    firmaSelect.appendChild(opt);
+                });
+                firmaSelect.addEventListener("change", urunleriYukle);
+            })
+            .catch(() => alert("Firmalar alınamadı."));
+    });
+
+    function urunleriYukle() {
+        const firmaId = document.getElementById("firmaSec").value;
+        if (!firmaId) return;
+
+        fetch(`/BayiSayfasi/GetUrunler?firmaId=${firmaId}`)
+            .then(res => res.ok ? res.json() : [])
+            .then(urunler => {
+                const urunSelect = document.getElementById("urunSec");
+                urunSelect.innerHTML = "<option disabled selected>Ürün seçiniz</option>";
+                urunler.forEach(u => {
+                    const opt = document.createElement("option");
+                    opt.value = u.id;
+                    opt.textContent = u.ad;
+                    urunSelect.appendChild(opt);
+                });
+            })
+            .catch(() => alert("Ürünler yüklenirken hata oluştu."));
+    }
+
+    function tabloyuGetir() {
+        const urunId = document.getElementById("urunSec").value;
+        if (!urunId) return alert("Lütfen bir ürün seçiniz.");
+        aktifUrunId = urunId;
+
+        fetch(`/BayiSayfasi/GetTablo?urunId=${urunId}`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+                if (!data) return alert("Tablo verisi alınamadı.");
+
+                hucreMetalar = data.hucreler;
+
+                const rowCount = data.grid.length;
+                const colCount = data.grid[0]?.length || 1;
+
+                hot.loadData(data.grid);
+
+                hot.updateSettings({
+                    maxRows: rowCount,
+                    maxCols: colCount,
+                    cells: function (row, col) {
+                        const cellId = String.fromCharCode(65 + col) + (row + 1);
+                        const meta = hucreMetalar.find(h => h.hucreAdi === cellId);
+
+                          if (!meta || !meta.gozuksunMu) {
+        return {
+            readOnly: true,
+            className: 'htDimmed',
+            renderer: function (instance, td, row, col, prop, value, cellProperties) {
+                td.innerText = "";
+                return td;
+            }
+        };
+    }
+
+                        // 🔒 Formül hücreleri: görünür olsa bile yazılamaz
+                        if (meta.formulMu) {
+                            return {
+                                readOnly: true,
+                                className: 'htDimmed'
+                            };
+                        }
+
+                        // 🚫 Görünmesin istenen hücre: veriyi hesaplar ama görünmez
+                        if (!meta.gozuksunMu) {
+                            return {
+                                readOnly: true,
+                                className: 'htDimmed',
+                                renderer: function (instance, td) {
+                                    Handsontable.renderers.TextRenderer.apply(this, arguments);
+                                    td.innerText = ""; // ✅ tamamen boş göster
+                                }
+                            };
+                        }
+
+                        // 🖊️ Sadece görünür ve giriş izni olanlar yazılabilir
+                        const yazilabilir = meta.girdimiYapabilir && meta.gozuksunMu;
+                        return {
+                            readOnly: !yazilabilir
+                        };
+                    }
+                });
+
+                hot.render(); // tabloyu tekrar çiz
+            })
+            .catch(() => alert("Tablo yüklenirken hata oluştu."));
+    }
+</script>
+

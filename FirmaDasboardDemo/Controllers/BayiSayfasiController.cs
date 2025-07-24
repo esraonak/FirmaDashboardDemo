@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Models;
 using FirmaDasboardDemo.Dtos;
-using NCalc;
+
 
 namespace FirmaDashboardDemo.Controllers
 {
@@ -141,7 +141,7 @@ namespace FirmaDashboardDemo.Controllers
                 grid
             });
         }
-
+    
 
 
 

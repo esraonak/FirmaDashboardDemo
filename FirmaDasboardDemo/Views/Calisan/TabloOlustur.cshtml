@@ -5,6 +5,17 @@
 
 <!-- Ürün Ekle Butonu -->
 <!-- Ürün İşlem Butonları -->
+
+<style>
+    .editable-cell {
+        background-color: #e7fbe7 !important;
+    }
+
+    .hidden-cell {
+        background-color: #f8d7da !important;
+    }
+</style>
+
 <div class="mb-2">
     <button class="btn btn-success" onclick="$('#urunEkleModal').modal('show')">+ Ürün Ekle</button>
     <button class="btn btn-danger" onclick="urunSil()">– Ürün Sil</button>
@@ -47,27 +58,29 @@
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
+<div style="margin-top: 20px;">
+    <button onclick="setMarkingMode('editable')" class="btn btn-success">Änderbar markieren</button>
+    <button onclick="setMarkingMode('hidden')" class="btn btn-danger">Unsichtbar markieren</button>
+</div>
+
+<!--
 <script>
     let hot;
 
     document.addEventListener("DOMContentLoaded", function () {
         const container = document.getElementById('hot');
 
-         hot = new Handsontable(document.getElementById('hot'), {
-            data: [
-                ['=1+2', '=A1*3', ''],
-                ['', '=A2+5', '']
-            ],
+        hot = new Handsontable(document.getElementById('hot'), {
+            data: [ ['','',''],
+                    ['','',''],
+                    ['','','']],
             rowHeaders: true,
-            //colHeaders: ['A', 'B', 'C'],
             colHeaders: true,
             minSpareCols: 1, // automatisch eine leere Spalte extra
             allowInsertColumn: true,
             minSpareRows: 1,     // Immer 1 leere Zeile am Ende verfügbar
             allowInsertRow: true, // Benutzer darf Zeilen einfügen
-            formulas: {
-                engine: HyperFormula
-            },
+            formulas: { engine: HyperFormula },
             licenseKey: 'non-commercial-and-evaluation'
         });
 
@@ -210,3 +223,186 @@
     }
 
 </script>
+-->
+
+<script>
+    let hot;
+    let markingMode = null; // 'editable' | 'hidden' | null
+    const markedCells = {}; // z.B. { "A1": { editable: true }, "B2": { visible: false } }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        hot = new Handsontable(document.getElementById('hot'), {
+            data: [ ['','',''],
+                    ['','',''],
+                    ['','','']],
+            rowHeaders: true,
+            colHeaders: true,
+            minSpareCols: 1, // automatisch eine leere Spalte extra
+            allowInsertColumn: true,
+            minSpareRows: 1,     // Immer 1 leere Zeile am Ende verfügbar
+            allowInsertRow: true, // Benutzer darf Zeilen einfügen
+            formulas: { engine: HyperFormula },
+            licenseKey: 'non-commercial-and-evaluation'
+        });
+    });
+
+    function setMarkingMode(mode) {
+        markingMode = mode;
+        alert(`Modus aktiviert: ${mode === 'editable' ? 'Änderbar' : 'Unsichtbar'} – jetzt Bereich markieren`);
+
+        hot.addHookOnce('afterSelectionEnd', function (rowStart, colStart, rowEnd, colEnd) {
+            const minRow = Math.min(rowStart, rowEnd);
+            const maxRow = Math.max(rowStart, rowEnd);
+            const minCol = Math.min(colStart, colEnd);
+            const maxCol = Math.max(colStart, colEnd);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cellCoord = getCellCoord(r, c);
+                    if (!markedCells[cellCoord]) markedCells[cellCoord] = {};
+
+                    if (markingMode === 'editable') {
+                        markedCells[cellCoord].editable = true;
+                        hot.setCellMeta(r, c, 'readOnly', false);
+                        hot.setCellMeta(r, c, 'className', 'editable-cell');
+                    } else if (markingMode === 'hidden') {
+                        //markedCells[cellCoord].visible = false;
+                        hot.setCellMeta(r, c, 'className', 'hidden-cell');
+                     }
+                }
+            }
+
+            hot.render();
+            markingMode = null;
+        });
+    }
+
+    function getCellCoord(row, col) {
+        return `${String.fromCharCode(65 + col)}${row + 1}`;
+    }
+
+    function kaydet() {
+        const urunSelect = document.getElementById("urunSec");
+        const urunId = parseInt(urunSelect.value);
+        const urunAd = urunSelect.options[urunSelect.selectedIndex].text;
+        const formulluVeri = hot.getSourceData();
+
+        const hucreler = [];
+
+        formulluVeri.forEach((row, i) => {
+            row.forEach((val, j) => {
+                const hucreAdi = getCellCoord(i, j);
+                const props = markedCells[hucreAdi] || {};
+                hucreler.push({
+                    HucreAdi: hucreAdi,
+                    Formul: val,
+                    IsFormul: typeof val === 'string' && val.trim().startsWith("="),
+                    Editable: props.editable || false,
+                    Visible: props.visible !== false // default true
+                });
+            });
+        });
+
+        fetch('/api/tablo/kaydet', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                UrunId: urunId,
+                TabloAdi: `${urunAd} TABLOSU`,
+                Aciklama: `${urunAd} üzerinden oluşturuldu.`,
+                Hucreler: hucreler
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.status === "ok") alert("✅ Tablo başarıyla kaydedildi!");
+            else alert("❌ Hata oluştu.");
+        });
+   
+       // Ürünleri yükle
+        fetch("/api/urun/liste")
+            .then(res => res.json())
+            .then(urunler => {
+                const select = document.getElementById("urunSec");
+                select.innerHTML = "";
+                urunler.forEach(u => {
+                    const opt = document.createElement("option");
+                    opt.value = u.id;
+                    opt.textContent = u.ad;
+                    select.appendChild(opt);
+                });
+            });
+    }
+
+    //urunsİL
+    function urunSil() {
+        const urunId = document.getElementById("urunSec").value;
+        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
+
+        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+
+        fetch(`/api/urun/sil/${urunId}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "ok") {
+                alert("✅ Ürün silindi.");
+
+                // Dropdown'dan ürünü kaldır
+                const select = document.getElementById("urunSec");
+                select.querySelector(`option[value="${urunId}"]`)?.remove();
+            } else {
+                alert("❌ Ürün silinirken hata oluştu.");
+            }
+        });
+    }
+    // Ürün ekle
+    function urunEkle() {
+        const urunAd = document.getElementById("yeniUrunAdi").value;
+        const urunAciklama = document.getElementById("yeniUrunAciklama").value;
+
+        if (!urunAd.trim()) {
+            alert("Ürün adı boş olamaz.");
+            return;
+        }
+
+        fetch("/api/urun/ekle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                Ad: urunAd,
+                Aciklama: urunAciklama
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.id) {
+                const select = document.getElementById("urunSec");
+                const option = document.createElement("option");
+                option.value = data.id;
+                option.textContent = data.ad;
+                select.appendChild(option);
+                select.value = data.id;
+
+                alert("✅ Ürün başarıyla eklendi: " + data.ad);
+                document.getElementById("yeniUrunAdi").value = "";
+                document.getElementById("yeniUrunAciklama").value = "";
+                $('#urunEkleModal').modal('hide');
+            } else {
+                alert("❌ Ürün eklenirken hata oluştu.Aynı isimde urunEkle olabılır");
+            }
+        });
+    }
+
+
+    // 🌈 CSS-Klassen für farbliche Markierung
+    const style = document.createElement("style");
+    style.innerHTML = `
+        .green-cell { background-color: #d4edda !important; }
+        .red-cell { background-color: #f8d7da !important; }
+    `;
+    document.head.appendChild(style);
+
+</script>
+

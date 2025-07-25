@@ -25,10 +25,11 @@
                 <td>@t.UrunAd</td>
                 <td>@t.Ad</td>
                 <td>
-                    <form method="post" action="/Tablo/TabloSilOnayla/@t.Id"
+                    <form method="post" action="/@ViewBag.SirketSeoUrl/Tablo/TabloSilOnayla/@t.Id"
                           onsubmit="return confirm('Bu tabloyu silmek istediğinizden emin misiniz?');">
+
                         <button type="submit" class="btn btn-danger btn-sm">Sil</button>
-                    </form>
+                   
                 </td>
             </tr>
         }

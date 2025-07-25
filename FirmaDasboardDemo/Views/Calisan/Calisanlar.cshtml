@@ -84,11 +84,17 @@
 </div>
 
 @section Scripts {
+    @{
+        var seo = Context.Session.GetString("FirmaSeoUrl") ?? "TENTECI";
+    }
+
     <script>
+        const seo = '@seo'; // Razor'dan firmaSeoUrl alınır
+
         $(document).ready(function () {
             const table = $('#calisanTable').DataTable({
                 ajax: {
-                    url: '/Calisan/GetCalisanlar',
+                    url: `/${seo}/Admin/Calisan/GetCalisanlar`,
                     dataSrc: ''
                 },
                 columns: [
@@ -117,7 +123,7 @@
             $('#addForm').submit(function (e) {
                 e.preventDefault();
                 const formData = $(this).serialize();
-                $.post('/Calisan/AddCalisan', formData, function (res) {
+                $.post(`/${seo}/Admin/Calisan/AddCalisan`, formData, function (res) {
                     if (res.status === 'success') {
                         $('#addModal').modal('hide');
                         table.ajax.reload();
@@ -129,7 +135,7 @@
             // ✏️ Düzenle
             $('#calisanTable').on('click', '.edit-btn', function () {
                 const id = $(this).data('id');
-                $.get(`/Calisan/GetCalisanById/${id}`, function (data) {
+                $.get(`/${seo}/Admin/Calisan/GetCalisanById/${id}`, function (data) {
                     const form = $('#editForm');
                     form.find('[name=Id]').val(data.id);
                     form.find('[name=AdSoyad]').val(data.adSoyad);
@@ -141,41 +147,38 @@
             });
 
             // 🔁 Güncelle
-                    // 🔁 Güncelleme formu gönderildiğinde
-        $('#editForm').submit(function (e) {
-            e.preventDefault();
+            $('#editForm').submit(function (e) {
+                e.preventDefault();
 
-            const form = $(this); // Sadece form içinden değer oku
+                const form = $(this);
+                const formData = {
+                    Id: form.find('input[name="Id"]').val(),
+                    AdSoyad: form.find('input[name="AdSoyad"]').val(),
+                    Email: form.find('input[name="Email"]').val(),
+                    Telefon: form.find('input[name="Telefon"]').val(),
+                    AktifMi: form.find('input[name="AktifMi"]').is(':checked')
+                };
 
-            const formData = {
-                Id: form.find('input[name="Id"]').val(),
-                AdSoyad: form.find('input[name="AdSoyad"]').val(),
-                Email: form.find('input[name="Email"]').val(),
-                Telefon: form.find('input[name="Telefon"]').val(),
-                AktifMi: form.find('input[name="AktifMi"]').is(':checked')
-            };
-
-            $.ajax({
-                url: '/Calisan/UpdateCalisan',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(formData),
-                success: function (res) {
-                    if (res.status === 'success') {
-                        $('#editModal').modal('hide');
-                        $('#calisanTable').DataTable().ajax.reload();
-                        alert("Çalışan başarıyla güncellendi.");
+                $.ajax({
+                    url: `/${seo}/Admin/Calisan/UpdateCalisan`,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function (res) {
+                        if (res.status === 'success') {
+                            $('#editModal').modal('hide');
+                            table.ajax.reload();
+                            alert("Çalışan başarıyla güncellendi.");
+                        }
                     }
-                }
+                });
             });
-        });
-
 
             // ❌ Sil
             $('#calisanTable').on('click', '.delete-btn', function () {
                 const id = $(this).data('id');
                 if (confirm("Çalışanı silmek istiyor musunuz?")) {
-                    $.post('/Calisan/DeleteCalisan', { id }, function (res) {
+                    $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
                         if (res.status === "deleted") {
                             table.ajax.reload();
                         }
@@ -185,3 +188,4 @@
         });
     </script>
 }
+

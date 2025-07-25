@@ -5,6 +5,7 @@
 
 <section class="content-header">
     <div class="container-fluid">
+        <input type="hidden" id="firmaId" value="@Context.Session.GetInt32("FirmaId")" />
         <h1>Bayi Paneli</h1>
     </div>
 </section>
@@ -15,13 +16,10 @@
         <!-- Firma ve Ürün Seçimi -->
         <div class="card">
             <div class="card-header">
-                <h3 class="card-title">Firma ve Ürün Seç</h3>
+                <h3 class="card-title">Ürün Seç</h3>
             </div>
             <div class="card-body">
-                <div class="form-group">
-                    <label for="firmaSec">Firma Seç:</label>
-                    <select id="firmaSec" class="form-control"></select>
-                </div>
+               
 
                 <div class="form-group mt-3">
                     <label for="urunSec">Ürün Seç:</label>
@@ -50,6 +48,7 @@
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
 <script>
+    const firmaSeoUrl = "@(Context.Session.GetString("FirmaSeoUrl") ?? "")";
     let hot;
     let aktifUrunId = null;
     let hucreMetalar = [];
@@ -70,47 +69,34 @@
             }
         });
 
-        fetch("/BayiSayfasi/GetFirmalarim")
-            .then(res => res.ok ? res.json() : [])
-            .then(firmalar => {
-                const firmaSelect = document.getElementById("firmaSec");
-                firmaSelect.innerHTML = "<option disabled selected>Firma seçiniz</option>";
-                firmalar.forEach(f => {
-                    const opt = document.createElement("option");
-                    opt.value = f.id;
-                    opt.textContent = f.ad;
-                    firmaSelect.appendChild(opt);
-                });
-                firmaSelect.addEventListener("change", urunleriYukle);
-            })
-            .catch(() => alert("Firmalar alınamadı."));
+          urunleriYukle();
     });
 
     function urunleriYukle() {
-        const firmaId = document.getElementById("firmaSec").value;
-        if (!firmaId) return;
+    const firmaId = document.getElementById("firmaId").value;
+    if (!firmaId) return;
 
-        fetch(`/BayiSayfasi/GetUrunler?firmaId=${firmaId}`)
-            .then(res => res.ok ? res.json() : [])
-            .then(urunler => {
-                const urunSelect = document.getElementById("urunSec");
-                urunSelect.innerHTML = "<option disabled selected>Ürün seçiniz</option>";
-                urunler.forEach(u => {
-                    const opt = document.createElement("option");
-                    opt.value = u.id;
-                    opt.textContent = u.ad;
-                    urunSelect.appendChild(opt);
-                });
-            })
-            .catch(() => alert("Ürünler yüklenirken hata oluştu."));
-    }
+            fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetUrunler`)
+        .then(res => res.ok ? res.json() : [])
+        .then(urunler => {
+            const urunSelect = document.getElementById("urunSec");
+            urunSelect.innerHTML = "<option disabled selected>Ürün seçiniz</option>";
+            urunler.forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u.id;
+                opt.textContent = u.ad;
+                urunSelect.appendChild(opt);
+            });
+        })
+        .catch(() => alert("Ürünler yüklenirken hata oluştu."));
+}
 
     function tabloyuGetir() {
         const urunId = document.getElementById("urunSec").value;
         if (!urunId) return alert("Lütfen bir ürün seçiniz.");
         aktifUrunId = urunId;
 
-        fetch(`/BayiSayfasi/GetTablo?urunId=${urunId}`)
+                fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetTablo?urunId=${urunId}`)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
                 if (!data) return alert("Tablo verisi alınamadı.");

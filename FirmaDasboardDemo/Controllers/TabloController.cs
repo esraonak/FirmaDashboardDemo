@@ -6,7 +6,7 @@ using FirmaDasboardDemo.Models; // FormulTablosu ve Hucre modeli için gerekli
 
 namespace FirmaDasboardDemo.Controllers
 {
-    public class TabloController : Controller
+    public class TabloController : BaseAdminController
     {
         private readonly ApplicationDbContext _context;
 
@@ -14,15 +14,15 @@ namespace FirmaDasboardDemo.Controllers
         {
             _context = context;
         }
-        [HttpPost]
-        [Route("api/urun/ekle")]
-        public IActionResult UrunEkle([FromBody] UrunEkleDto dto)
+
+        [HttpPost("{seoUrl}/api/urun/ekle")]
+        public IActionResult UrunEkle(string seoUrl, [FromBody] UrunEkleDto dto)
         {
-            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
                 return Unauthorized();
-            // 🔁 Aynı adda ürün varsa uyarı dön
-            bool ayniAdVar = _context.Urun.Any(u => u.FirmaId == firmaId && u.Ad.ToLower() == dto.Ad.ToLower());
+
+            bool ayniAdVar = _context.Urun.Any(u => u.FirmaId == firma.Id && u.Ad.ToLower() == dto.Ad.ToLower());
             if (ayniAdVar)
             {
                 return Ok(new { status = "duplicate" });
@@ -32,7 +32,7 @@ namespace FirmaDasboardDemo.Controllers
             {
                 Ad = dto.Ad,
                 Aciklama = dto.Aciklama,
-                FirmaId = firmaId.Value
+                FirmaId = firma.Id
             };
 
             _context.Urun.Add(urun);
@@ -41,21 +41,23 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { id = urun.Id, ad = urun.Ad });
         }
 
-        [HttpGet]
-        [Route("api/urun/liste")]
-        public IActionResult UrunleriGetir()
+       
+        [HttpGet("{seoUrl}/api/urun/liste")]
+        public IActionResult UrunleriGetir(string seoUrl)
         {
-            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
                 return Unauthorized();
 
             var urunler = _context.Urun
-                .Where(u => u.FirmaId == firmaId && !_context.FormulTablosu.Any(t => t.UrunId == u.Id))
+                .Where(u => u.FirmaId == firma.Id && !_context.FormulTablosu.Any(t => t.UrunId == u.Id))
                 .Select(u => new { id = u.Id, ad = u.Ad })
                 .ToList();
 
             return Ok(urunler);
+            
         }
+
         [HttpGet]
         [Route("api/urun/tabloluurun")]
         public IActionResult TablosuOlanUrunleriGetir()
@@ -64,7 +66,6 @@ namespace FirmaDasboardDemo.Controllers
             if (firmaId == null)
                 return Unauthorized();
 
-            // ❗️Sadece FormulTablosu kaydı olan ürünleri getir
             var urunler = _context.Urun
                 .Where(u => u.FirmaId == firmaId && _context.FormulTablosu.Any(t => t.UrunId == u.Id))
                 .Select(u => new { id = u.Id, ad = u.Ad })
@@ -73,41 +74,38 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(urunler);
         }
 
-        // GET: /Tablo/TabloOlustur
-        [HttpGet]
-        public IActionResult TabloOlustur()
+        [HttpGet("{seoUrl}/Admin/Tablo/TabloOlustur")]
+        public IActionResult TabloOlustur(string seoUrl)
         {
-            var firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
-                return RedirectToAction("Login", "Calisan");
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
+                return NotFound();
+
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            ViewBag.SirketSeoUrl = seoUrl;
 
             var urunler = _context.Urun
-                .Where(u => u.FirmaId == firmaId)
+                .Where(u => u.FirmaId == firma.Id)
                 .Select(u => new { u.Id, u.Ad })
                 .ToList();
 
             ViewBag.Urunler = urunler;
-
-            // View: Views/Calisan/TabloOlustur.cshtml
+            ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} ADMIN";
             return View("~/Views/Calisan/TabloOlustur.cshtml");
         }
 
-        // POST: /api/tablo/kaydet
-        [HttpPost("api/tablo/kaydet")]
-        public IActionResult Kaydet([FromBody] TabloKayitDto input)
+        [HttpPost("{seoUrl}/api/tablo/kaydet")]
+        public IActionResult Kaydet(string seoUrl, [FromBody] TabloKayitDto input)
         {
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             var calisanId = HttpContext.Session.GetInt32("UserId");
-            var firmaId = HttpContext.Session.GetInt32("FirmaId");
 
-            if (calisanId == null || firmaId == null)
+            if (firma == null || calisanId == null)
                 return Unauthorized();
 
-            // Aynı ürün için tablo var mı kontrol
             var mevcut = _context.FormulTablosu.Any(t => t.UrunId == input.UrunId);
             if (mevcut)
-            {
                 return Ok(new { status = "already_exists" });
-            }
 
             var tablo = new FormulTablosu
             {
@@ -121,7 +119,6 @@ namespace FirmaDasboardDemo.Controllers
                     HucreAdi = h.HucreAdi,
                     Formul = h.Formul ?? "",
                     IsFormul = h.IsFormul,
-                    // Girebilir olan hücre otomatik olarak görünür olacak
                     GozuksunMu = h.GirdimiYapabilir ? true : h.GozuksunMu,
                     GirdimiYapabilir = h.GirdimiYapabilir
                 }).ToList()
@@ -133,12 +130,21 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { status = "ok", tabloId = tablo.Id });
         }
 
-
-        [HttpGet]
-        public IActionResult TabloDuzenle()
+        [HttpGet("{seoUrl}/Admin/Tablo/TabloDuzenle")]
+        public IActionResult TabloDuzenle(string seoUrl)
         {
-            return View("~/Views/Calisan/TabloDuzenle.cshtml"); // otomatik olarak Views/Tablo/TabloDuzenle.cshtml'yi bulur
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
+                return NotFound();
+
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+            ViewBag.SirketSeoUrl = seoUrl;
+            ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} ADMIN";
+
+            return View("~/Views/Calisan/TabloDuzenle.cshtml");
         }
+
         [HttpGet]
         public IActionResult VeriGetir(int urunId)
         {
@@ -190,17 +196,19 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { status = "ok" });
         }
 
-
-        [HttpGet]
-        public IActionResult TabloSil()
+        [HttpGet("{seoUrl}/Admin/Tablo/TabloSil")]
+        public IActionResult TabloSil(string seoUrl)
         {
-            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
-                return RedirectToAction("Login", "Calisan");
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
+                return NotFound();
+
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            ViewBag.SirketSeoUrl = seoUrl;
 
             var tablolar = _context.FormulTablosu
                 .Include(t => t.Urun)
-                .Where(t => t.Urun.FirmaId == firmaId)
+                .Where(t => t.Urun.FirmaId == firma.Id)
                 .Select(t => new {
                     Id = t.Id,
                     Ad = t.Ad,
@@ -209,39 +217,47 @@ namespace FirmaDasboardDemo.Controllers
                 .ToList();
 
             ViewBag.Tablolar = tablolar;
-
+            ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} ADMIN";
             return View("~/Views/Calisan/TabloSil.cshtml");
         }
 
-        [HttpPost]
-        public IActionResult TabloSilOnayla(int id)
+      [HttpPost]
+public IActionResult TabloSilOnayla(int id)
+{
+    var tablo = _context.FormulTablosu
+        .Include(t => t.Hucreler)
+        .FirstOrDefault(t => t.Id == id);
+
+    if (tablo == null)
+        return NotFound();
+
+    _context.Hucre.RemoveRange(tablo.Hucreler);
+    _context.FormulTablosu.Remove(tablo);
+    _context.SaveChanges();
+
+    TempData["SilmeMesaji"] = "✅ Tablo başarıyla silindi.";
+
+    // firmaSeoUrl route'tan alınıyor
+    string seoUrl = RouteData.Values["firmaSeoUrl"]?.ToString();
+
+    return RedirectToAction("TabloSil", new { seoUrl });
+}
+
+
+        [HttpDelete("{seoUrl}/api/urun/sil/{id}")]
+        public IActionResult UrunSil(string seoUrl, int id)
         {
-            var tablo = _context.FormulTablosu
-                .Include(t => t.Hucreler)
-                .FirstOrDefault(t => t.Id == id);
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null)
+                return Unauthorized();
 
-            if (tablo == null)
-                return NotFound();
-
-            _context.Hucre.RemoveRange(tablo.Hucreler); // önce bağlı hücreleri sil
-            _context.FormulTablosu.Remove(tablo);       // sonra tabloyu sil
-            _context.SaveChanges();
-
-            TempData["SilmeMesaji"] = "✅ Tablo başarıyla silindi.";
-            return RedirectToAction("TabloSil");
-        }
-        [HttpDelete]
-        [Route("api/urun/sil/{id}")]
-        public IActionResult UrunSil(int id)
-        {
             var urun = _context.Urun
                 .Include(u => u.FormulTablolari)
-                .FirstOrDefault(u => u.Id == id);
+                .FirstOrDefault(u => u.Id == id && u.FirmaId == firma.Id);
 
             if (urun == null)
                 return NotFound(new { status = "not_found" });
 
-            // Eğer ürünün FormulTablosu varsa ilişkili tablolarla birlikte sil (isteğe bağlı)
             if (urun.FormulTablolari != null && urun.FormulTablolari.Any())
             {
                 foreach (var tablo in urun.FormulTablolari)
@@ -257,7 +273,6 @@ namespace FirmaDasboardDemo.Controllers
 
             return Ok(new { status = "ok" });
         }
-
 
     }
 }

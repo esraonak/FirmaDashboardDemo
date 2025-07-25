@@ -3,11 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Models;
 using FirmaDasboardDemo.Dtos;
+using FirmaDasboardDemo.Controllers;
 
 
 namespace FirmaDashboardDemo.Controllers
 {
-    public class BayiSayfasiController : Controller
+    [Route("{firmaSeoUrl}/Bayi")]
+    public class BayiSayfasiController : BaseBayiController
     {
         private readonly ApplicationDbContext _context;
 
@@ -16,13 +18,33 @@ namespace FirmaDashboardDemo.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public IActionResult Login()
+
+        [HttpGet("Login")]
+        public IActionResult Login(string firmaSeoUrl)
         {
-            return View(); // -> Views/BayiSayfasi/Login.cshtml dosyasına yönlendirir
+            if (string.IsNullOrWhiteSpace(firmaSeoUrl))
+                return Content("Eksik bağlantı.");
+
+            var firma = _context.Firmalar
+                .AsEnumerable()
+                .FirstOrDefault(f => f.SeoUrl.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase));
+
+            if (firma == null || !firma.AktifMi)
+                return Content("Geçersiz firma bağlantısı.");
+
+            // ✅ Session’a firma bilgilerini ve kullanıcı rolünü yaz
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            HttpContext.Session.SetString("FirmaAd", firma.Ad);
+            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+            HttpContext.Session.SetString("UserRole", "Bayi"); // ❗️EKLENDİ
+
+            // ✅ Layout için ViewBag başlık
+            ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} BAYİ PANELİ";
+
+            return View();
         }
 
-        [HttpPost]
+        [HttpPost("Login")]
         public IActionResult Login(string Username, string Password)
         {
             var bayi = _context.Bayiler.FirstOrDefault(b => b.Email == Username && b.Sifre == Password && b.AktifMi);
@@ -32,50 +54,51 @@ namespace FirmaDashboardDemo.Controllers
                 return View();
             }
 
+            // ✅ Zorunlu Session kayıtları
             HttpContext.Session.SetInt32("UserId", bayi.Id);
             HttpContext.Session.SetInt32("RolId", bayi.RolId);
             HttpContext.Session.SetString("UserAd", bayi.Ad);
+            HttpContext.Session.SetString("UserRole", "Bayi"); // ❗️EKLENDİ
 
-            return RedirectToAction("Dashboard");
+            // ✅ Firma bilgisini session'dan al
+            var firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl");
+            if (string.IsNullOrEmpty(firmaSeoUrl))
+            {
+                return Content("Firma bilgisi eksik.");
+            }
+
+            // (İsteğe bağlı) Panel başlığı ayarlanabilir ama View’a dönülmediği için zorunlu değil
+            ViewBag.PanelBaslik = $"{firmaSeoUrl.ToUpper()} BAYİ PANELİ";
+
+            // ✅ Dashboard’a yönlendir
+            return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
         }
 
-        [HttpGet]
-        public IActionResult Dashboard()
+
+        [HttpGet("Dashboard")]
+        public IActionResult Dashboard(string firmaSeoUrl)
         {
             var bayiId = HttpContext.Session.GetInt32("UserId");
             if (bayiId == null)
-                return RedirectToAction("Login", "Bayi");
+                return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
 
+            ViewBag.PanelBaslik = $"{firmaSeoUrl.ToUpper()} BAYİ PANELİ";
             return View("BayiDashboard");
         }
 
-        // ✅ Bayinin kayıtlı olduğu firmaları getirir
-        [HttpGet("BayiSayfasi/GetFirmalarim")]
-        public IActionResult GetFirmalarim()
-        {
-            var bayiId = HttpContext.Session.GetInt32("UserId");
-            if (bayiId == null)
-                return Unauthorized();
 
-            var firmalar = _context.BayiFirmalari
-                .Include(bf => bf.Firma)
-                .Where(bf => bf.BayiId == bayiId)
-                .Select(bf => new
-                {
-                    id = bf.Firma.Id,
-                    ad = bf.Firma.Ad
-                })
-                .ToList();
-
-            return Json(firmalar);
-        }
 
         // ✅ Seçilen firmaya ait ürünleri getirir
         [HttpGet("BayiSayfasi/GetUrunler")]
-        public IActionResult GetUrunler(int firmaId)
+        public IActionResult GetUrunler()
         {
+            var firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Unauthorized();
+
             var urunler = _context.Urun
                 .Where(u => u.FirmaId == firmaId)
+                .Where(u => _context.FormulTablosu.Any(ft => ft.UrunId == u.Id))
                 .Select(u => new
                 {
                     id = u.Id,
@@ -85,6 +108,7 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(urunler);
         }
+
 
         // ✅ Seçilen ürünün bayi tarafından görüntülenebilir formül tablosunu getirir
         [HttpGet("BayiSayfasi/GetTablo")]

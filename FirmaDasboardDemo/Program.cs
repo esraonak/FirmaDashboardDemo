@@ -29,6 +29,8 @@ app.UseAuthentication(); // Giriş kontrolü varsa
 app.UseAuthorization();
 
 // Başlangıç route
+
+// 1️⃣ Sabit (öncelikli) yollar
 app.MapControllerRoute(
     name: "admin",
     pattern: "Admin/{action=Login}/{id?}",
@@ -44,10 +46,44 @@ app.MapControllerRoute(
     pattern: "Calisan/{action=Login}/{id?}",
     defaults: new { controller = "Calisan" });
 
-// En son fallback/default route (isteğe bağlı)
+
+// 2️⃣ FirmaSeoUrl ile ÇALIŞAN paneli için
+app.MapControllerRoute(
+    name: "firmaAdmin",
+    pattern: "{firmaSeoUrl}/Admin/{action=Login}",
+    defaults: new { controller = "Calisan" });
+
+
+// 3️⃣ FirmaSeoUrl ile BAYİ login + dashboard için
+app.MapControllerRoute(
+    name: "firmaBayiDashboard",
+    pattern: "{firmaSeoUrl}/Dashboard",
+    defaults: new { controller = "BayiSayfasi", action = "Dashboard" });
+
+app.MapControllerRoute(
+    name: "firmaBayiLogin",
+    pattern: "{firmaSeoUrl}",
+    defaults: new { controller = "BayiSayfasi", action = "Login" });
+
+
+// 4️⃣ Fallback (gerekirse)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Admin}/{action=Login}/{id?}");
+
+app.MapControllerRoute(
+    name: "firmaBayiRoutes",
+    pattern: "{firmaSeoUrl}/Bayi/{action=Login}/{id?}",
+    defaults: new { controller = "Bayi" });
+app.MapControllerRoute(
+    name: "firmaCalisan",
+    pattern: "{firmaSeoUrl}/Calisan/{action=Calisanlar}/{id?}",
+    defaults: new { controller = "Calisan" });
+app.MapControllerRoute(
+    name: "firmaTablo",
+    pattern: "{firmaSeoUrl}/Tablo/{action=TabloOlustur}/{id?}",
+    defaults: new { controller = "Tablo" });
+
 // ✅ Seed verilerini ekle
 
 /*using (var scope = app.Services.CreateScope())

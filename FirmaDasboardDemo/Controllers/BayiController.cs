@@ -3,10 +3,11 @@ using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
+using FirmaDasboardDemo.Controllers;
 
 namespace FirmaDashboardDemo.Controllers
 {
-    public class BayiController : Controller
+    public class BayiController : BaseAdminController
     {
         private readonly ApplicationDbContext _context;
 
@@ -15,27 +16,34 @@ namespace FirmaDashboardDemo.Controllers
             _context = context;
         }
 
-        // 📄 Bayi Listesi Sayfası
-        [HttpGet]
-        public IActionResult BayiList()
+        private bool FirmaSeoUrlGecerliMi(string firmaSeoUrl)
         {
-            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
-                return RedirectToAction("Login", "Calisan");
-
-            var bayiler = _context.BayiFirmalari
-                .Include(bf => bf.Bayi)
-                .Where(bf => bf.FirmaId == firmaId)
-                .Select(bf => bf.Bayi)
-                .ToList();
-
-            return View(bayiler);
+            var sessionSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+            return !string.IsNullOrEmpty(sessionSeo) && sessionSeo.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase);
         }
 
-        // 📦 Bayi listesini JSON olarak getir
-        [HttpGet]
-        public IActionResult GetBayiler()
+        [HttpGet("{firmaSeoUrl}/Admin/Bayi/BayiList")]
+        public IActionResult BayiList(string firmaSeoUrl)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
+
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
+            var firma = _context.Firmalar.FirstOrDefault(x => x.Id == firmaId);
+            if (firma != null)
+                ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} BAYİ PANELİ";
+
+            return View();
+        }
+
+        [HttpGet("{firmaSeoUrl}/Admin/Bayi/GetBayiler")]
+        public IActionResult GetBayiler(string firmaSeoUrl)
+        {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -58,10 +66,12 @@ namespace FirmaDashboardDemo.Controllers
             return Json(bayiler);
         }
 
-        // ➕ Form üzerinden yeni bayi ekle (modal submit)
-        [HttpPost]
-        public IActionResult AddBayi(Bayi model)
+        [HttpPost("{firmaSeoUrl}/Admin/Bayi/AddBayi")]
+        public IActionResult AddBayi(string firmaSeoUrl, Bayi model)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -70,7 +80,7 @@ namespace FirmaDashboardDemo.Controllers
             if (bayiRol == null)
                 return BadRequest(new { status = "role_not_found" });
 
-            model.Sifre = "1234"; // default şifre
+            model.Sifre = "1234";
             model.AktifMi = true;
             model.RolId = bayiRol.Id;
 
@@ -87,10 +97,12 @@ namespace FirmaDashboardDemo.Controllers
             return Json(new { status = "success" });
         }
 
-        // 🔁 JSON listesiyle toplu ekleme/güncelleme (örneğin JSpreadsheet için)
-        [HttpPost]
-        public IActionResult SaveBayiler([FromBody] JsonElement data)
+        [HttpPost("{firmaSeoUrl}/Admin/Bayi/SaveBayiler")]
+        public IActionResult SaveBayiler(string firmaSeoUrl, [FromBody] JsonElement data)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null) return Unauthorized();
 
@@ -148,41 +160,45 @@ namespace FirmaDashboardDemo.Controllers
             return Ok(new { status = "success" });
         }
 
-        // ❌ Bayi sil
-        [HttpPost]
-        public IActionResult DeleteBayi(int id)
+        [HttpPost("{firmaSeoUrl}/Admin/Bayi/DeleteBayi")]
+        public IActionResult DeleteBayi(string firmaSeoUrl, int id)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == id);
             if (bayi != null)
             {
                 _context.Bayiler.Remove(bayi);
 
-                var bayiFirmalar = _context.BayiFirmalari
-                    .Where(x => x.BayiId == id).ToList();
-
+                var bayiFirmalar = _context.BayiFirmalari.Where(x => x.BayiId == id).ToList();
                 _context.BayiFirmalari.RemoveRange(bayiFirmalar);
-                _context.SaveChanges();
 
+                _context.SaveChanges();
                 return Ok(new { status = "deleted" });
             }
 
             return NotFound(new { status = "not_found" });
         }
 
-        // 🔍 Düzenleme için ID ile bayi verisi getir
-        [HttpGet]
-        public IActionResult GetBayiById(int id)
+        [HttpGet("{firmaSeoUrl}/Admin/Bayi/GetBayiById")]
+        public IActionResult GetBayiById(string firmaSeoUrl, int id)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == id);
             if (bayi == null) return NotFound();
 
             return Json(bayi);
         }
 
-        // 📝 Güncelleme (modal form ile)
-        [HttpPost]
-        public IActionResult UpdateBayi([FromBody] Bayi model)
+        [HttpPost("{firmaSeoUrl}/Admin/Bayi/UpdateBayi")]
+        public IActionResult UpdateBayi(string firmaSeoUrl, [FromBody] Bayi model)
         {
+            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
+                return Unauthorized();
+
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == model.Id);
             if (bayi == null) return NotFound();
 

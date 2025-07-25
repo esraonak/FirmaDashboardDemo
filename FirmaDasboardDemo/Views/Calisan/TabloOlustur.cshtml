@@ -28,71 +28,60 @@
                 <button class="btn btn-secondary" data-dismiss="modal">İptal</button>
                 <button class="btn btn-primary" onclick="urunEkle()">Ekle</button>
             </div>
+            
         </div>
     </div>
 </div>
 
 <h3>Yeni Hesaplama Tablosu (Handsontable)</h3>
 <div id="hot" style="margin-top: 20px; width: 100%;"></div>
+<div class="mt-3">
+    <button id="btnGozuksun" class="btn btn-success" onclick="toggleMarkingMode('GozuksunMu')">🟢 Bayi Görebilsin</button>
+    <button id="btnGirebilir" class="btn btn-danger" onclick="toggleMarkingMode('GirdimiYapabilir')">✍️ Bayi Değer Girebilsin</button>
+    <button id="btnTemizle" class="btn btn-secondary" onclick="toggleMarkingMode('Temizle')">🧹 Gizli Kalsın</button>
+
+
+</div>
+
+
 <button class="btn btn-primary mt-3" onclick="kaydet()">Kaydet</button>
+<style>
+    .hucre-girebilir {
+        background-color: #f8d7da !important; /* Açık kırmızı */
+    }
+
+    .hucre-gozuksun {
+        background-color: #d4edda !important; /* Açık yeşil */
+    }
+
+    .btn.active {
+        box-shadow: inset 0 0 8px #000000aa, 0 0 5px #28a74588;
+        border: 2px solid #00000055;
+        opacity: 1;
+        font-weight: bold;
+        transform: scale(1.02);
+        transition: all 0.1s ease-in-out;
+    }
+</style>
+
+
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
+
 <script>
+    const seoUrl = '@ViewBag.SirketSeoUrl';
     let hot;
-    let metaDataMap = {}; // Hücre bazlı görünürlük ve giriş kontrolü için
+    let metaDataMap = {};
+    let aktifMod = null;
 
     document.addEventListener("DOMContentLoaded", function () {
-        hot = new Handsontable(document.getElementById('hot'), {
-            data: [['=1+2', '=A1*3'], ['=A2+5', '']],
-            rowHeaders: true,
-            colHeaders: true,
-            minSpareCols: 1,
-            minSpareRows: 1,
-            allowInsertColumn: true,
-            allowInsertRow: true,
-            formulas: { engine: HyperFormula },
-            contextMenu: {
-                items: {
-                        "gozuksun": {
-        name: "🟢 Bayi Görebilsin",
-        callback: function () {
-            const coords = hot.getSelectedLast();
-            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
-            const row = coords[0];
-            const col = coords[1];
-            const cell = String.fromCharCode(65 + col) + (row + 1);
+        initHandsontable();
 
-            metaDataMap[cell] = metaDataMap[cell] || {};
-            metaDataMap[cell].GozuksunMu = !(metaDataMap[cell].GozuksunMu ?? false);
-            alert(`${cell} için Gözükme durumu: ${metaDataMap[cell].GozuksunMu}`);
-        }
-    },
-    "girebilir": {
-        name: "✍️ Bayi Değer Girebilsin",
-        callback: function () {
-            const coords = hot.getSelectedLast();
-            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
-            const row = coords[0];
-            const col = coords[1];
-            const cell = String.fromCharCode(65 + col) + (row + 1);
-
-            metaDataMap[cell] = metaDataMap[cell] || {};
-            metaDataMap[cell].GirdimiYapabilir = !(metaDataMap[cell].GirdimiYapabilir ?? false);
-            alert(`${cell} için Giriş izni: ${metaDataMap[cell].GirdimiYapabilir}`);
-        }
-    }
-    ,
-                    "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
-                    ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
-                }
-            },
-            licenseKey: 'non-commercial-and-evaluation'
-        });
-
-        fetch("/api/urun/liste")
+        // Ürünleri getir
+        fetch(`/${seoUrl}/api/urun/liste`)
             .then(res => res.json())
             .then(urunler => {
                 const select = document.getElementById("urunSec");
@@ -103,57 +92,128 @@
                     opt.textContent = u.ad;
                     select.appendChild(opt);
                 });
+
+                // Ürün seçildiğinde tabloyu temizle
+                select.addEventListener("change", () => {
+                    if (hot) hot.destroy();
+                    metaDataMap = {};
+                    initHandsontable();
+                });
             });
     });
 
-    function getCellId(coords) {
-        if (!coords || typeof coords.row !== "number" || typeof coords.col !== "number") {
-            console.warn("Geçersiz hücre koordinatı:", coords);
-            return null;
-        }
-        return String.fromCharCode(65 + coords.col) + (coords.row + 1);
-    }
+    function initHandsontable() {
+        hot = new Handsontable(document.getElementById('hot'), {
+            data: [['', ''], ['', '']],
+            rowHeaders: true,
+            colHeaders: true,
+            minSpareCols: 1,
+            minSpareRows: 1,
+            allowInsertColumn: true,
+            allowInsertRow: true,
+            formulas: { engine: HyperFormula },
+            contextMenu: {
+                items: {
+                    "gozuksun": {
+                        name: "🟢 Bayi Görebilsin",
+                        callback: function () {
+                            const coords = hot.getSelectedLast();
+                            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
+                            const row = coords[0];
+                            const col = coords[1];
+                            const cell = String.fromCharCode(65 + col) + (row + 1);
 
-    function urunSil() {
-        const urunId = document.getElementById("urunSec").value;
-        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
-        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+                            metaDataMap[cell] = metaDataMap[cell] || {};
+                            metaDataMap[cell].GozuksunMu = !(metaDataMap[cell].GozuksunMu ?? false);
+                            metaDataMap[cell].GirdimiYapabilir = false;
+                            hot.render();
+                        }
+                    },
+                    "girebilir": {
+                        name: "✍️ Bayi Değer Girebilsin",
+                        callback: function () {
+                            const coords = hot.getSelectedLast();
+                            if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
+                            const row = coords[0];
+                            const col = coords[1];
+                            const cell = String.fromCharCode(65 + col) + (row + 1);
 
-        fetch(`/api/urun/sil/${urunId}`, { method: 'DELETE' })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === "ok") {
-                    alert("✅ Ürün silindi.");
-                    document.querySelector(`#urunSec option[value="${urunId}"]`).remove();
-                } else {
-                    alert("❌ Ürün silinemedi.");
+                            metaDataMap[cell] = metaDataMap[cell] || {};
+                            metaDataMap[cell].GirdimiYapabilir = !(metaDataMap[cell].GirdimiYapabilir ?? false);
+                            metaDataMap[cell].GozuksunMu = false;
+                            hot.render();
+                        }
+                    },
+                    "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
+                    ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
                 }
-            });
+            },
+            cells: function (row, col) {
+                const cellId = String.fromCharCode(65 + col) + (row + 1);
+                const meta = metaDataMap[cellId] || {};
+                const props = {};
+
+                if (meta.GirdimiYapabilir) {
+                    props.className = 'hucre-girebilir';
+                } else if (meta.GozuksunMu) {
+                    props.className = 'hucre-gozuksun';
+                } else {
+                    props.className = ''; // Beyaz
+                }
+
+                return props;
+            },
+            licenseKey: 'non-commercial-and-evaluation'
+        });
     }
 
-    function urunEkle() {
-        const ad = document.getElementById("yeniUrunAdi").value.trim();
-        const aciklama = document.getElementById("yeniUrunAciklama").value;
+    function toggleMarkingMode(mode) {
+        if (aktifMod === mode) {
+            aktifMod = null;
+            document.getElementById("btnGozuksun").classList.remove("active");
+            document.getElementById("btnGirebilir").classList.remove("active");
+            document.getElementById("btnTemizle").classList.remove("active");
+            return;
+        }
 
-        if (!ad) return alert("Ürün adı boş olamaz.");
+        aktifMod = mode;
+        document.getElementById("btnGozuksun").classList.toggle("active", mode === "GozuksunMu");
+        document.getElementById("btnGirebilir").classList.toggle("active", mode === "GirdimiYapabilir");
+        document.getElementById("btnTemizle").classList.toggle("active", mode === "Temizle");
 
-        fetch("/api/urun/ekle", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ Ad: ad, Aciklama: aciklama })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.id) {
-                const opt = new Option(data.ad, data.id);
-                document.getElementById("urunSec").appendChild(opt);
-                alert("✅ Ürün eklendi: " + data.ad);
-                document.getElementById("yeniUrunAdi").value = "";
-                document.getElementById("yeniUrunAciklama").value = "";
-                $('#urunEkleModal').modal('hide');
-            } else {
-                alert("❌ Ürün eklenemedi. Aynı isimde olabilir.");
+        alert(`${mode === "GozuksunMu" ? "🟢 Görebilsin" : mode === "GirdimiYapabilir" ? "✍️ Girebilsin" : "🧹 Gizle"} modu aktif. Alan seçin.`);
+
+        hot.addHookOnce('afterSelectionEnd', function (rowStart, colStart, rowEnd, colEnd) {
+            const minRow = Math.min(rowStart, rowEnd);
+            const maxRow = Math.max(rowStart, rowEnd);
+            const minCol = Math.min(colStart, colEnd);
+            const maxCol = Math.max(colStart, colEnd);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cellId = String.fromCharCode(65 + c) + (r + 1);
+
+                    if (mode === "Temizle") {
+                        delete metaDataMap[cellId];
+                    } else {
+                        metaDataMap[cellId] = metaDataMap[cellId] || {};
+                        if (mode === "GozuksunMu") {
+                            metaDataMap[cellId].GozuksunMu = true;
+                            metaDataMap[cellId].GirdimiYapabilir = false;
+                        } else if (mode === "GirdimiYapabilir") {
+                            metaDataMap[cellId].GirdimiYapabilir = true;
+                            metaDataMap[cellId].GozuksunMu = false;
+                        }
+                    }
+                }
             }
+
+            aktifMod = null;
+            document.getElementById("btnGozuksun").classList.remove("active");
+            document.getElementById("btnGirebilir").classList.remove("active");
+            document.getElementById("btnTemizle").classList.remove("active");
+
+            hot.render();
         });
     }
 
@@ -180,9 +240,7 @@
             });
         });
 
-        console.table(metaDataMap); // ✅ Kontrol için
-
-        fetch('/api/tablo/kaydet', {
+        fetch(`/${seoUrl}/api/tablo/kaydet`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -203,6 +261,49 @@
             alert("❌ Sunucu hatası!");
         });
     }
+
+    function urunSil() {
+        const urunId = document.getElementById("urunSec").value;
+        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
+        if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
+
+        fetch(`/${seoUrl}/api/urun/sil/${urunId}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "ok") {
+                    alert("✅ Ürün silindi.");
+                    document.querySelector(`#urunSec option[value="${urunId}"]`).remove();
+                } else {
+                    alert("❌ Ürün silinemedi.");
+                }
+            });
+    }
+
+    function urunEkle() {
+        const ad = document.getElementById("yeniUrunAdi").value.trim();
+        const aciklama = document.getElementById("yeniUrunAciklama").value;
+        if (!ad) return alert("Ürün adı boş olamaz.");
+
+        fetch(`/${seoUrl}/api/urun/ekle`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Ad: ad, Aciklama: aciklama })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.id) {
+                const opt = new Option(data.ad, data.id);
+                document.getElementById("urunSec").appendChild(opt);
+                alert("✅ Ürün eklendi: " + data.ad);
+                document.getElementById("yeniUrunAdi").value = "";
+                document.getElementById("yeniUrunAciklama").value = "";
+                $('#urunEkleModal').modal('hide');
+            } else {
+                alert("❌ Ürün eklenemedi. Aynı isimde olabilir.");
+            }
+        });
+    }
 </script>
+
 
 

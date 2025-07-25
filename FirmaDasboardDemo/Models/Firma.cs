@@ -32,6 +32,10 @@ namespace FirmaDasboardDemo.Models
         public int MaxBayiSayisi { get; set; }     // maksimum bayi sayısı
         public DateTime LisansBitisTarihi { get; set; } // lisans süres
         public bool AktifMi { get; set; }
+        // 🆕 Firma için özel URL
+        [MaxLength(100)]
+        [Required]
+        public string SeoUrl { get; set; }  // örn: "tenten", "canacadir", "akfirma"
         // Firma ile ilgili kullanıcılar (çalışanlar)
         public ICollection<FirmaCalisani> Calisanlar { get; set; }
 

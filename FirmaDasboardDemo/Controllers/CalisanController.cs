@@ -2,10 +2,13 @@
 using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Models;
 using Microsoft.EntityFrameworkCore;
+using FirmaDasboardDemo.Controllers;
 
 namespace FirmaDashboardDemo.Controllers
 {
-    public class CalisanController : Controller
+
+    [Route("{firmaSeoUrl}/Admin")]
+    public class CalisanController : BaseAdminController
     {
         private readonly ApplicationDbContext _context;
 
@@ -14,51 +17,110 @@ namespace FirmaDashboardDemo.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public IActionResult Login()
+        [HttpGet("Login")]
+        public IActionResult Login(string firmaSeoUrl)
         {
+            if (string.IsNullOrWhiteSpace(firmaSeoUrl))
+                return Content("Eksik bağlantı.");
+
+            var firma = _context.Firmalar
+                .AsEnumerable()
+                .FirstOrDefault(f => f.SeoUrl.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase));
+
+            if (firma == null || !firma.AktifMi)
+                return Content("Geçersiz firma bağlantısı.");
+
+            // Session’a yaz
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            HttpContext.Session.SetString("FirmaAd", firma.Ad);
+            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+
+            // ❗️ViewBag ile View’a gönder
+            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+
             return View();
         }
 
-        [HttpPost]
-        public IActionResult Login(string Username, string Password)
-        {
-            var calisan = _context.FirmaCalisanlari
-                .FirstOrDefault(x => x.Email == Username && x.Sifre == Password && x.AktifMi);
 
-            if (calisan != null)
+        [HttpPost("Login")]
+        public IActionResult Login(string firmaSeoUrl, string Username, string Password)
+        {
+            var firma = _context.Firmalar
+    .AsEnumerable()
+    .FirstOrDefault(f => f.SeoUrl.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase));
+
+
+            if (firma == null || !firma.AktifMi)
+                return Content("Firma bağlantısı geçersiz.");
+
+            var calisan = _context.FirmaCalisanlari
+                .FirstOrDefault(x => x.Email == Username &&
+                                     x.Sifre == Password &&
+                                     x.AktifMi &&
+                                     x.FirmaId == firma.Id); // 🔒 Firma ile eşleştirildi mi?
+
+            if (calisan == null)
             {
-                HttpContext.Session.SetString("UserRole", "Calisan");
-                HttpContext.Session.SetInt32("UserId", calisan.Id);
-                HttpContext.Session.SetInt32("FirmaId", calisan.FirmaId);
-                return RedirectToAction("Dashboard");
+                ViewBag.Error = "Geçersiz kullanıcı adı veya şifre.";
+                return View();
             }
 
-            ViewBag.Error = "Geçersiz kullanıcı adı veya şifre.";
-            return View();
+            // Session kayıtları
+            HttpContext.Session.SetString("UserRole", "Calisan");
+            HttpContext.Session.SetInt32("UserId", calisan.Id);
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            HttpContext.Session.SetString("FirmaAd", firma.Ad);
+            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+
+            return Redirect("/" + firmaSeoUrl + "/Admin/Dashboard");
         }
 
-        public IActionResult Dashboard()
+
+        [HttpGet("Dashboard")]
+        public IActionResult Dashboard(string firmaSeoUrl)
         {
-            return RedirectToAction("BayiList", "Bayi");
+            var calisanId = HttpContext.Session.GetInt32("UserId");
+            var firmaSessionSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+
+            if (calisanId == null || string.IsNullOrEmpty(firmaSessionSeo) || !firmaSeoUrl.Equals(firmaSessionSeo, StringComparison.OrdinalIgnoreCase))
+            {
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
+            }
+
+            return Redirect("/" + firmaSeoUrl + "/Admin/Bayi/BayiList");
         }
 
-        public IActionResult Logout()
+
+        [HttpGet("Logout")]
+        public IActionResult Logout(string firmaSeoUrl)
         {
             HttpContext.Session.Clear();
-            return RedirectToAction("Login");
+            return Redirect("/" + firmaSeoUrl + "/Admin/Login");
         }
 
         // ✅ Tüm çalışanları getir (JSON)
-        [HttpGet]
-        public IActionResult Calisanlar()
+        [HttpGet("Calisan/Calisanlar")]
+        public IActionResult Calisanlar(string firmaSeoUrl)
         {
+            var firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
+
+            var firma = _context.Firmalar.FirstOrDefault(x => x.Id == firmaId);
+            if (firma != null)
+                ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} ADMIN PANELİ";
+
             return View();
         }
 
-        [HttpGet]
-        public IActionResult GetCalisanlar()
+
+        [HttpGet("Calisan/GetCalisanlar")]
+        public IActionResult GetCalisanlar(string firmaSeoUrl)
         {
+            var sessionSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+            if (string.IsNullOrEmpty(sessionSeo) || !sessionSeo.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase))
+                return Unauthorized();
+
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -77,6 +139,7 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(calisanlar);
         }
+
 
         // ✅ Yeni çalışan ekle
         [HttpPost]

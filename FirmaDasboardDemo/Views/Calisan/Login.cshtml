@@ -23,7 +23,9 @@
                     <div class="alert alert-danger">@ViewBag.Error</div>
                 }
 
-                <form asp-action="Login" method="post">
+                <form asp-controller="Calisan" asp-action="Login" asp-route-firmaSeoUrl="@ViewBag.FirmaSeoUrl" method="post">
+
+
                     <div class="input-group mb-3">
                         <input type="text" name="Username" class="form-control" placeholder="Email" required />
                         <div class="input-group-append"><div class="input-group-text"><span class="fas fa-user"></span></div></div>

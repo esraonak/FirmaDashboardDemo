@@ -6,7 +6,14 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Bayi Giriş</title>
+    @if (Context.Session.GetString("FirmaAd") != null)
+    {
+        <h2>@Context.Session.GetString("FirmaAd") Bayi Girişi</h2>
+    }
+    else
+    {
+        <h2>Bayi Girişi</h2>
+    }
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />

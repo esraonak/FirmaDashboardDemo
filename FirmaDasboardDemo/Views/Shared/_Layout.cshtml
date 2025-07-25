@@ -1,7 +1,10 @@
 ﻿@{
     Layout = null;
     var userRole = Context.Session.GetString("UserRole");
+    var seo = Context.Session.GetString("FirmaSeoUrl");
+
 }
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -36,58 +39,88 @@
         <aside class="main-sidebar sidebar-dark-primary elevation-4">
             <a href="#" class="brand-link">
                 <i class="fas fa-cogs ml-3 mr-2"></i>
-                <span class="brand-text font-weight-light">Firma Paneli</span>
+                <span class="brand-text font-weight-light">
+                    @if (userRole == "Calisan")
+                    {
+                        @($"{seo?.ToUpper()} ADMIN PANELİ")
+                    }
+                    else if (userRole == "Bayi")
+                    {
+                        @($"{seo?.ToUpper()} BAYİ PANELİ")
+                    }
+                    else
+                    {
+                        @("PANEL")
+                    }
+                </span>
+
             </a>
+
             <div class="sidebar">
                 <nav class="mt-2">
                     <ul class="nav nav-pills nav-sidebar flex-column">
                         @if (userRole == "Calisan")
                         {
                             <li class="nav-item">
-                                <a href="~/Bayi/BayiList" class="nav-link">
+                                <a href="/@seo/Admin/Bayi/BayiList" class="nav-link">
                                     <i class="nav-icon fas fa-users"></i>
                                     <p>Bayiler</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="~/Calisan/Calisanlar" class="nav-link">
-                                    <i class="nav-icon fas fa-users"></i>
+                                <a href="/@seo/Admin/Calisan/Calisanlar" class="nav-link">
+                                    <i class="nav-icon fas fa-user-shield"></i>
                                     <p>Admin Yetkilileri</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="~/Tablo/TabloOlustur" class="nav-link">
+                                <a href="/@seo/Admin/Tablo/TabloOlustur" class="nav-link">
                                     <i class="nav-icon fas fa-table"></i>
                                     <p>Tablo Oluştur</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="~/Tablo/TabloDuzenle" class="nav-link">
+                                <a href="/@seo/Admin/Tablo/TabloDuzenle" class="nav-link">
                                     <i class="nav-icon fas fa-edit"></i>
                                     <p>Tablo Düzenle</p>
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a href="~/Tablo/TabloSil" class="nav-link">
+                                <a href="/@seo/Admin/Tablo/TabloSil" class="nav-link">
                                     <i class="nav-icon fas fa-trash-alt"></i>
                                     <p>Tablo Sil</p>
                                 </a>
                             </li>
-
-
+                            <li class="nav-item">
+                                <a href="/@seo/Admin/Login" class="nav-link">
+                                    <i class="nav-icon fas fa-sign-out-alt"></i>
+                                    <p>Çıkış Yap</p>
+                                </a>
+                            </li>
                         }
-                        <li class="nav-item">
-                            <a href="~/Account/Logout" class="nav-link">
-                                <i class="nav-icon fas fa-sign-out-alt"></i>
-                                <p>Çıkış Yap</p>
-                            </a>
-                        </li>
+                        else if (userRole == "Bayi")
+                        {
+                            <li class="nav-item">
+                                <a href="/@seo/Bayi/Dashboard" class="nav-link">
+                                    <i class="nav-icon fas fa-calculator"></i>
+                                    <p>Hesaplama</p>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="/@seo/Bayi/Login" class="nav-link">
+                                    <i class="nav-icon fas fa-sign-out-alt"></i>
+                                    <p>Çıkış Yap</p>
+                                </a>
+                            </li>
+                        }
+
+                        
                     </ul>
                 </nav>
             </div>
         </aside>
 
-        <!-- Content -->
+        <!-- İçerik -->
         <div class="content-wrapper">
             <div class="content-header">
                 <div class="container-fluid">

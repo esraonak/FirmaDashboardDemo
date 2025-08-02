@@ -1,0 +1,351 @@
+﻿@{
+    Layout = "~/Views/Shared/_SuperAdminLayout.cshtml";
+    ViewData["Title"] = "Firmalar";
+}
+
+@section Styles {
+    <style>
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+    </style>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">Firma Listesi</h3>
+        <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#firmaEkleModal">Yeni Firma Ekle</button>
+    </div>
+    <div class="card-body">
+        <table id="firmaTablosu" class="display nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th>Firma Adı</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Seo URL</th>
+                    <th>Lisans Bitiş</th>
+                    <th>Aktif</th>
+                    <th>Giriş URL</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- ✅ Firma Ekle Modal -->
+<div class="modal fade" id="firmaEkleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form method="post" action="/SuperAdmin/AddFirma" enctype="multipart/form-data">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Firma Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input name="Ad" class="form-control mb-2" placeholder="Firma Adı" required />
+                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" />
+                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" />
+                    <input name="SeoUrl" class="form-control mb-2" placeholder="Seo URL" required />
+                    <input name="LisansBitisTarihi" type="date" class="form-control mb-2" />
+                    <input name="Adres" class="form-control mb-2" placeholder="Adres" />
+                    <input name="Il" class="form-control mb-2" placeholder="İl" />
+                    <input name="Ilce" class="form-control mb-2" placeholder="İlçe" />
+                    <label><strong>Logo Seç:</strong></label>
+                    <input type="file" name="LogoFile" accept="image/*" class="form-control mb-2" />
+                    <input name="InstagramUrl" class="form-control mb-2" placeholder="Instagram" />
+                    <input name="FacebookUrl" class="form-control mb-2" placeholder="Facebook" />
+                    <input name="TwitterUrl" class="form-control mb-2" placeholder="Twitter" />
+                    <input name="WebSitesi" class="form-control mb-2" placeholder="Web Sitesi" />
+                    <input name="MaxCalisanSayisi" type="number" class="form-control mb-2" placeholder="Max Çalışan Sayısı" />
+                    <input name="MaxBayiSayisi" type="number" class="form-control mb-2" placeholder="Max Bayi Sayısı" />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="AktifMi" id="AktifMi" checked />
+                        <label class="form-check-label" for="AktifMi">Aktif Mi?</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ✅ Çalışan Ekle Modal -->
+<div class="modal fade" id="calisanEkleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="calisanEkleForm">
+            <!-- 🔁 Burada düzeltme yapıldı -->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Çalışan Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="FirmaId" id="calisanFirmaId" />
+                    <input name="AdSoyad" class="form-control mb-2" placeholder="Ad Soyad" required />
+                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" required />
+                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" required />
+                    <input name="Sifre" type="password" class="form-control mb-2" placeholder="Şifre" required />
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="AktifMi" id="AktifMiCheckbox" checked />
+                        <label class="form-check-label" for="AktifMiCheckbox">Aktif Mi?</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- ✅ Firma Düzenle Modal -->
+<div class="modal fade" id="firmaDuzenleModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <form id="firmaDuzenleForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Firma Düzenle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="duzenleFirmaId" />
+                    <input name="Ad" id="duzenleAd" class="form-control mb-2" placeholder="Firma Adı" required />
+                    <input name="Email" id="duzenleEmail" type="email" class="form-control mb-2" placeholder="Email" />
+                    <input name="Telefon" id="duzenleTelefon" class="form-control mb-2" placeholder="Telefon" />
+                    <input name="SeoUrl" id="duzenleSeoUrl" class="form-control mb-2" placeholder="Seo URL" required />
+                    <input name="LisansBitisTarihi" id="duzenleLisansBitisTarihi" type="date" class="form-control mb-2" />
+                    <input type="text" id="duzenleAdres" class="form-control" placeholder="Adres" />
+                    <input type="text" id="duzenleIl" class="form-control" placeholder="İl" />
+                    <input type="text" id="duzenleIlce" class="form-control" placeholder="İlçe" />
+                    <input type="number" id="duzenleMaxCalisanSayisi" class="form-control" placeholder="Maks. Çalışan" />
+                    <input type="number" id="duzenleMaxBayiSayisi" class="form-control" placeholder="Maks. Bayi" />
+                    <input type="text" id="duzenleLogoUrl" class="form-control" placeholder="Logo Url" />
+                    <input type="text" id="duzenleInstagram" class="form-control" placeholder="Instagram Url" />
+                    <input type="text" id="duzenleFacebook" class="form-control" placeholder="Facebook Url" />
+                    <input type="text" id="duzenleTwitter" class="form-control" placeholder="Twitter Url" />
+                    <input type="text" id="duzenleWebSitesi" class="form-control" placeholder="Web Sitesi" />
+
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="AktifMi" id="duzenleAktifMi" />
+                        <label class="form-check-label" for="duzenleAktifMi">Aktif Mi?</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Güncelle</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">İptal</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- HEAD kısmına -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+<!-- Footer'dan hemen önce -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+@section Scripts {
+    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    @if (ViewBag.Hata != null)
+    {
+        <script>
+            $(document).ready(function () {
+                toastr.options = {
+                    "closeButton": true,
+                    "progressBar": true,
+                    "positionClass": "toast-top-right"
+                };
+                toastr.error("@ViewBag.Hata");
+            });
+        </script>
+    }
+    <script>
+        $(document).ready(function () {
+            const table = $('#firmaTablosu').DataTable({
+                ajax: {
+                    url: '/SuperAdmin/GetFirmalar',
+                    dataSrc: ''
+                },
+                       columns: [
+            { data: 'ad' },
+            { data: 'email' },
+            { data: 'telefon' },
+            { data: 'seoUrl' },
+            {
+                data: 'lisansBitisTarihi',
+                render: function (data) {
+                    return data ? new Date(data).toLocaleDateString('tr-TR') : '-';
+                }
+            },
+            {
+                data: 'aktifMi',
+                render: data => data ? 'Evet' : 'Hayır'
+            },
+            {
+                data: 'seoUrl', // ✅ Giriş URL kolonu
+                render: function (seoUrl) {
+                    const baseUrl = window.location.origin;
+                    const fullUrl = `${baseUrl}/${seoUrl}/Admin/Login`;
+                    return `
+                        <div class="d-flex align-items-center">
+                            <input type="text" value="${fullUrl}" class="form-control form-control-sm mr-2" readonly style="width: 200px;" />
+                            <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('${fullUrl}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'id',
+                render: id => `
+                    <div class="action-buttons">
+                        <button class="btn btn-warning btn-sm duzenle-btn" data-id="${id}">Düzenle</button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">Sil</button>
+                        <button class="btn btn-info btn-sm ekle-btn" data-id="${id}">CalisanEkle</button>
+                    </div>
+                `,
+                orderable: false,
+                searchable: false
+            }
+        ]
+
+            });
+
+            // ✅ Firma Sil
+            $('#firmaTablosu').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+                if (confirm("Firmayı silmek istiyor musunuz?")) {
+                    $.post('/SuperAdmin/DeleteFirma', { id }, function (res) {
+                        if (res.status === "deleted") {
+                            table.ajax.reload();
+                            alert("Firma silindi.");
+                        }
+                    });
+                }
+            });
+
+            // ✅ Firma Çalışan Ekle Modalı aç
+            $('#firmaTablosu').on('click', '.ekle-btn', function () {
+                const firmaId = $(this).data('id');
+                $('#calisanFirmaId').val(firmaId);
+                $('#calisanEkleModal').modal('show');
+            });
+
+            // ✅ Çalışan Kaydet Submit
+            $('#calisanEkleForm').submit(function (e) {
+                e.preventDefault();
+                var formData = new FormData(this);
+
+                $.ajax({
+                    url: '/SuperAdmin/AddCalisan',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                            success: function (res) {
+            if (res.status === "success") {
+                toastr.success("Çalışan başarıyla eklendi.");
+                $('#calisanEkleModal').modal('hide');
+                table.ajax.reload();
+            } else if (res.status === "email_exists") {
+                toastr.error("Bu e-posta adresi zaten kullanılıyor!");
+            } else {
+                toastr.error("Hata: " + (res.message || res.status));
+            }
+        },
+                    error: function () {
+                        alert("İşlem sırasında bir hata oluştu.");
+                    }
+                });
+            });
+
+            // ✅ Firma Düzenle Modalı aç
+            $('#firmaTablosu').on('click', '.duzenle-btn', function () {
+                const id = $(this).data('id');
+                $.get(`/SuperAdmin/GetFirmaById?id=${id}`, function (firma) {
+                    $('#duzenleFirmaId').val(firma.id);
+                    $('#duzenleAd').val(firma.ad);
+                    $('#duzenleEmail').val(firma.email);
+                    $('#duzenleTelefon').val(firma.telefon);
+                    $('#duzenleSeoUrl').val(firma.seoUrl);
+                    $('#duzenleLisansBitisTarihi').val(firma.lisansBitisTarihi?.split('T')[0] ?? '');
+                    $('#duzenleAktifMi').prop('checked', firma.aktifMi);
+
+                    $('#duzenleAdres').val(firma.adres);
+                    $('#duzenleIl').val(firma.il);
+                    $('#duzenleIlce').val(firma.ilce);
+                    $('#duzenleMaxCalisanSayisi').val(firma.maxCalisanSayisi);
+                    $('#duzenleMaxBayiSayisi').val(firma.maxBayiSayisi);
+                    $('#duzenleLogoUrl').val(firma.logoUrl);
+                    $('#duzenleInstagram').val(firma.instagramUrl);
+                    $('#duzenleFacebook').val(firma.facebookUrl);
+                    $('#duzenleTwitter').val(firma.twitterUrl);
+                    $('#duzenleWebSitesi').val(firma.webSitesi);
+
+                    $('#firmaDuzenleModal').modal('show');
+                });
+            });
+
+            // ✅ Firma Güncelle Submit
+            $('#firmaDuzenleForm').submit(function (e) {
+                e.preventDefault();
+
+                const model = {
+                    Id: $('#duzenleFirmaId').val(),
+                    Ad: $('#duzenleAd').val(),
+                    Email: $('#duzenleEmail').val(),
+                    Telefon: $('#duzenleTelefon').val(),
+                    SeoUrl: $('#duzenleSeoUrl').val(),
+                    LisansBitisTarihi: $('#duzenleLisansBitisTarihi').val(),
+                    AktifMi: $('#duzenleAktifMi').is(':checked'),
+
+                    Adres: $('#duzenleAdres').val(),
+                    Il: $('#duzenleIl').val(),
+                    Ilce: $('#duzenleIlce').val(),
+                    MaxCalisanSayisi: $('#duzenleMaxCalisanSayisi').val(),
+                    MaxBayiSayisi: $('#duzenleMaxBayiSayisi').val(),
+                    LogoUrl: $('#duzenleLogoUrl').val(),
+                    InstagramUrl: $('#duzenleInstagram').val(),
+                    FacebookUrl: $('#duzenleFacebook').val(),
+                    TwitterUrl: $('#duzenleTwitter').val(),
+                    WebSitesi: $('#duzenleWebSitesi').val()
+                };
+
+                $.ajax({
+                    url: '/SuperAdmin/UpdateFirma',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(model),
+                    success: function (res) {
+                        if (res.status === "success") {
+                            alert("Firma güncellendi.");
+                            $('#firmaDuzenleModal').modal('hide');
+                            table.ajax.reload();
+                        } else {
+                            alert("Hata: " + (res.message || res.status));
+                        }
+                    },
+                    error: function () {
+                        alert("Sunucu hatası oluştu.");
+                    }
+                });
+            });
+
+        });
+    </script>
+   
+
+}
+
+
+

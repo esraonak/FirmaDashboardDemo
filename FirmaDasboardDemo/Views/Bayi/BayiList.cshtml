@@ -38,6 +38,7 @@
                     <th>Email</th>
                     <th>Telefon</th>
                     <th>Aktif</th>
+                    <th>Giriş URL</th>
                     <th>İşlem</th>
                 </tr>
             </thead>
@@ -111,42 +112,69 @@
                     url: `/${seo}/Admin/Bayi/GetBayiler`,
                     dataSrc: ''
                 },
-                columns: [
-                    { data: 'ad' },
-                    { data: 'adres' },
-                    { data: 'il' },
-                    { data: 'ilce' },
-                    { data: 'email' },
-                    { data: 'telefon' },
-                    {
-                        data: 'aktifMi',
-                        render: data => data ? 'Evet' : 'Hayır'
-                    },
-                    {
-                        data: 'id',
-                        render: id => `
-                            <div class="action-buttons">
-                                <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">Düzenle</button>
-                                <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">Sil</button>
-                            </div>
-                        `,
-                        orderable: false,
-                        searchable: false
-                    }
-                ]
-            });
+                       columns: [
+            { data: 'ad' },
+            { data: 'adres' },
+            { data: 'il' },
+            { data: 'ilce' },
+            { data: 'email' },
+            { data: 'telefon' },
+            {
+                data: 'aktifMi',
+                render: data => data ? 'Evet' : 'Hayır'
+            },
+            {
+                // ✅ Yeni sütun: Giriş URL
+                data: 'email', // veri önemli değil çünkü render override ediyoruz
+                render: function (data, type, row) {
+                    const baseUrl = window.location.origin;
+                    const loginUrl = `${baseUrl}/${seo}/Bayi/Login`;
+                    return `
+                        <div class="d-flex align-items-center">
+                            <input type="text" value="${loginUrl}" class="form-control form-control-sm mr-2" readonly style="width: 200px;" />
+                            <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('${loginUrl}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    `;
+                },
+                orderable: false,
+                searchable: false
+            },
+            {
+                data: 'id',
+                render: id => `
+                    <div class="action-buttons">
+                        <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">Düzenle</button>
+                        <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">Sil</button>
+                    </div>
+                `,
+                orderable: false,
+                searchable: false
+            }
+        ]
 
-            // ➕ Yeni bayi ekle
-            $('#addForm').submit(function (e) {
-                e.preventDefault();
-                $.post(`/${seo}/Admin/Bayi/AddBayi`, $(this).serialize(), function (res){
-                    if (res.status === "success") {
-                        $('#addModal').modal('hide');
-                        table.ajax.reload();
-                        alert("Bayi eklendi.");
-                    }
-                });
             });
+                    // ➕ Yeni bayi ekle
+        $('#addForm').submit(function (e) {
+            e.preventDefault();
+
+            $.post(`/${seo}/Admin/Bayi/AddBayi`, $(this).serialize(), function (res) {
+                if (res.status === "success") {
+                    $('#addModal').modal('hide');
+                    table.ajax.reload();
+                    alert("Bayi başarıyla eklendi.");
+                } else if (res.status === "email_exists") {
+                    alert("Bu e-posta zaten kayıtlı.");
+                } else {
+                    alert("Bir hata oluştu: " + (res.message || res.status));
+                }
+            }).fail(function () {
+                alert("Sunucuya ulaşılamadı. Lütfen tekrar deneyin.");
+            });
+        });
+
+
 
             // ❌ Bayi sil
             $('#bayiTable').on('click', '.delete-btn', function () {

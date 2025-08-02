@@ -6,23 +6,25 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    @if (Context.Session.GetString("FirmaAd") != null)
-    {
-        <h2>@Context.Session.GetString("FirmaAd") Bayi Girişi</h2>
-    }
-    else
-    {
-        <h2>Bayi Girişi</h2>
-    }
+    <title>Bayi Giriş</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" />
 </head>
 <body class="hold-transition login-page">
+
     <div class="login-box">
         <div class="login-logo">
-            <b>Bayi</b> Giriş
+            @* Firma logosu varsa göster *@
+            @if (!string.IsNullOrEmpty(Context.Session.GetString("FirmaLogo")))
+            {
+                <div class="mb-2 text-center">
+                    <img src="@Context.Session.GetString("FirmaLogo")" alt="Firma Logosu" style="max-height: 100px; border-radius: 50%; border: 2px solid #ccc; padding: 5px;" />
+                </div>
+            }
+
+            <b>@(Context.Session.GetString("FirmaAd") ?? "Bayi")</b> Giriş
         </div>
 
         <div class="card">
@@ -67,5 +69,16 @@
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+    @section Scripts {
+        <script>
+            $(document).ready(function () {
+                var mesaj = '@TempData["LoginError"]';
+                if (mesaj) {
+                    alert(mesaj);
+                }
+            });
+        </script>
+    }
+
 </body>
 </html>

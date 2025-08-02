@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using FirmaDasboardDemo.Models;
 
 namespace FirmaDasboardDemo.Models
 {
@@ -27,19 +27,36 @@ namespace FirmaDasboardDemo.Models
 
         [MaxLength(20)]
         public string Telefon { get; set; }
-        // ➤ Yeni Alanlar
-        public int MaxCalisanSayisi { get; set; }  // maksimum çalışan sayısı
-        public int MaxBayiSayisi { get; set; }     // maksimum bayi sayısı
-        public DateTime LisansBitisTarihi { get; set; } // lisans süres
+
+        // ➤ Lisans ve yönetimsel alanlar
+        public int MaxCalisanSayisi { get; set; }
+        public int MaxBayiSayisi { get; set; }
+        public DateTime LisansBitisTarihi { get; set; }
         public bool AktifMi { get; set; }
-        // 🆕 Firma için özel URL
+
+        // ➤ SEO ve firma kimliği
         [MaxLength(100)]
         [Required]
-        public string SeoUrl { get; set; }  // örn: "tenten", "canacadir", "akfirma"
-        // Firma ile ilgili kullanıcılar (çalışanlar)
-        public ICollection<FirmaCalisani> Calisanlar { get; set; }
+        public string SeoUrl { get; set; }
 
-        // Firmanın ilişkili olduğu bayiler (çoktan çoğa)
+        // 🖼️ Logo ve sosyal medya
+        [MaxLength(250)]
+        public string LogoUrl { get; set; }
+
+        [MaxLength(250)]
+        public string InstagramUrl { get; set; }
+
+        [MaxLength(250)]
+        public string FacebookUrl { get; set; }
+
+        [MaxLength(250)]
+        public string TwitterUrl { get; set; }
+
+        [MaxLength(250)]
+        public string WebSitesi { get; set; }
+
+        // ➤ Navigation properties
+        public ICollection<FirmaCalisani> Calisanlar { get; set; }
         public ICollection<BayiFirma> BayiFirmalari { get; set; }
     }
 }

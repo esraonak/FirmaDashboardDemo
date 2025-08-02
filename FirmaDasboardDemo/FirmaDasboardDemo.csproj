@@ -13,10 +13,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.10" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Views\Tablo\" />
+    <Folder Include="wwwroot\logos\" />
+    <Folder Include="wwwroot\demo\" />
+    <Folder Include="wwwroot\uploads\logos\" />
   </ItemGroup>
 
 </Project>

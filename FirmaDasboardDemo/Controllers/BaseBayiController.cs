@@ -1,33 +1,46 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using FirmaDasboardDemo.Data;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc;
 
-namespace FirmaDasboardDemo.Controllers
+public class BaseBayiController : Controller
 {
-    public class BaseBayiController : Controller
+    private readonly ApplicationDbContext _context;
+
+    public BaseBayiController(ApplicationDbContext context)
     {
-        public override void OnActionExecuting(ActionExecutingContext context)
+        _context = context;
+    }
+
+    public override void OnActionExecuting(ActionExecutingContext context)
+    {
+        var action = context.RouteData.Values["action"]?.ToString()?.ToLower();
+
+        if (action == "login" || action == "logout")
         {
-            var routeData = context.RouteData;
-            var action = routeData.Values["action"]?.ToString()?.ToLower();
-            var controller = routeData.Values["controller"]?.ToString()?.ToLower();
-
-            // Bayi login/logout gibi giriş sayfaları kontrol dışı bırakılır
-            if (action == "login" || action == "logout")
-            {
-                base.OnActionExecuting(context);
-                return;
-            }
-
-            var userRole = context.HttpContext.Session.GetString("UserRole");
-            var firmaSeoUrl = context.HttpContext.Session.GetString("FirmaSeoUrl") ?? "tente";
-
-            if (userRole != "Bayi" || string.IsNullOrEmpty(firmaSeoUrl))
-            {
-                context.Result = new RedirectToActionResult("Login", "BayiSayfasi", new { firmaSeoUrl });
-                return;
-            }
-
             base.OnActionExecuting(context);
+            return;
         }
+
+        var userRole = context.HttpContext.Session.GetString("UserRole");
+        var firmaId = context.HttpContext.Session.GetInt32("FirmaId");
+
+        if (userRole != "Bayi" || firmaId == null)
+        {
+            var seo = context.HttpContext.Session.GetString("FirmaSeoUrl") ?? "tente";
+            context.Result = new RedirectToActionResult("Login", "BayiSayfasi", new { firmaSeoUrl = seo });
+            return;
+        }
+
+        // Firma bilgilerini çek
+        var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
+        if (firma != null)
+        {
+            ViewBag.FirmaLogo = firma.LogoUrl;
+            ViewBag.FirmaAd = firma.Ad;
+            ViewBag.FirmaSeoUrl = firma.SeoUrl;
+            ViewBag.UserRole = userRole;
+        }
+
+        base.OnActionExecuting(context);
     }
 }

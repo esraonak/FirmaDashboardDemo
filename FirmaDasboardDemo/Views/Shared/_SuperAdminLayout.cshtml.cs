@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace FirmaDasboardDemo.Pages.Views.Admin
+namespace FirmaDasboardDemo.Views.Shared
 {
-    public class LoginModel : PageModel
+    public class _SuperAdminLayoutModel : PageModel
     {
         public void OnGet()
         {

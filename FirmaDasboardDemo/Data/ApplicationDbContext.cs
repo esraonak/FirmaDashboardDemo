@@ -19,7 +19,9 @@ namespace FirmaDasboardDemo.Data
         public DbSet<Urun> Urun { get; set; }
         public DbSet<FormulTablosu> FormulTablosu { get; set; }
         public DbSet<Hucre> Hucre { get; set; }
-
+        public DbSet<SuperAdmin> SuperAdminler { get; set; }
+        public DbSet<FirmaDegisken> FirmaDegiskenler { get; set; }
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -50,6 +52,8 @@ namespace FirmaDasboardDemo.Data
                 .WithMany()
                 .HasForeignKey(ft => ft.CalisanId)
                 .OnDelete(DeleteBehavior.Restrict); // ❗
+
+        
         }
     }
 }

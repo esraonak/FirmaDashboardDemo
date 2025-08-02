@@ -1,0 +1,121 @@
+﻿@{
+    ViewData["Title"] = "Kullanıcı Ayarları";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">Kullanıcı Ayarları</h3></div>
+    <div class="card-body">
+
+        <!-- 🔐 Şifre Değiştir Formu -->
+        <form method="post" action="/@ViewBag.SirketSeoUrl/Admin/SifreGuncelle">
+            <h5>🔐 Şifre Değiştir</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="password" name="MevcutSifre" class="form-control mb-2" placeholder="Mevcut Şifre" required />
+                    <input type="password" id="YeniSifre" name="YeniSifre" class="form-control mb-2" placeholder="Yeni Şifre" required />
+                    <input type="password" id="YeniSifreTekrar" name="YeniSifreTekrar" class="form-control mb-2" placeholder="Yeni Şifre (Tekrar)" required />
+                    <div id="sifreUyari" class="text-danger mb-2 d-none">⚠️ Şifreler aynı olmalıdır.</div>
+                    <button type="submit" class="btn btn-warning" id="sifreGuncelleBtn">Şifreyi Güncelle</button>
+                </div>
+            </div>
+        </form>
+
+        <hr class="my-4" />
+
+        <!-- 🌐 Sosyal Medya & Web Formu -->
+        <form method="post"  action="/@ViewBag.SirketSeoUrl/Admin/SosyalMedyaGuncelle">
+
+            <h5 class="mb-3">🌐 Sosyal Medya & Web</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="url" name="InstagramUrl" class="form-control mb-2" placeholder="Instagram URL" value="@ViewBag.Instagram" />
+                    <input type="url" name="TwitterUrl" class="form-control mb-2" placeholder="Twitter URL" value="@ViewBag.Twitter" />
+                    <input type="url" name="FacebookUrl" class="form-control mb-2" placeholder="Facebook URL" value="@ViewBag.Facebook" />
+                    <input type="url" name="WebSitesi" class="form-control mb-2" placeholder="Web Sitesi" value="@ViewBag.Web" />
+                    <button type="submit" class="btn btn-primary">Sosyal Medyayı Kaydet</button>
+                </div>
+            </div>
+        </form>
+
+        <hr class="my-4" />
+
+        <!-- 🖼️ Logo Güncelle Formu -->
+        <form method="post" action="/@ViewBag.SirketSeoUrl/Admin/LogoGuncelle" enctype="multipart/form-data">
+
+            <h5 class="mb-3">🖼️ Logo Güncelle</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="logoInput">Yeni Logo:</label>
+                    <input type="file" name="LogoFile" id="logoInput" accept="image/*" class="form-control mb-2" onchange="previewLogo()" />
+                    <button type="submit" class="btn btn-success">Logoyu Güncelle</button>
+                </div>
+                <div class="col-md-6" id="logoPreview">
+                    @if (ViewBag.LogoUrl != null)
+                    {
+                        <div>
+                            <strong>Mevcut Logo:</strong><br />
+                            <img src="@ViewBag.LogoUrl" alt="Logo" style="max-height:100px;" />
+                        </div>
+                    }
+                </div>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <script>
+         $(function () {
+            var success = '@TempData["Success"]';
+            var error = '@TempData["Error"]';
+
+            if (success) toastr.success(success);
+            if (error) toastr.error(error);
+        });
+        function previewLogo() {
+            const input = document.getElementById("logoInput");
+            const previewDiv = document.getElementById("logoPreview");
+
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+
+                const fileName = document.createElement("p");
+                fileName.textContent = "📁 " + file.name;
+                previewDiv.appendChild(fileName);
+
+                if (file.type.startsWith("image/")) {
+                    const img = document.createElement("img");
+                    img.src = URL.createObjectURL(file);
+                    img.alt = "Yeni Logo";
+                    img.style.maxHeight = "120px";
+                    img.style.marginTop = "10px";
+                    previewDiv.appendChild(img);
+                }
+            }
+        }
+
+        function sifreKontrol() {
+            const sifre = document.getElementById("YeniSifre").value;
+            const tekrar = document.getElementById("YeniSifreTekrar").value;
+            const uyari = document.getElementById("sifreUyari");
+
+            if (sifre !== tekrar) {
+                uyari.classList.remove("d-none");
+                document.getElementById("YeniSifre").classList.add("is-invalid");
+                document.getElementById("YeniSifreTekrar").classList.add("is-invalid");
+                return false;
+            } else {
+                uyari.classList.add("d-none");
+                document.getElementById("YeniSifre").classList.remove("is-invalid");
+                document.getElementById("YeniSifreTekrar").classList.remove("is-invalid");
+                return true;
+            }
+        }
+    </script>
+}

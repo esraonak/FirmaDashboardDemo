@@ -1,7 +1,10 @@
 ﻿@{
     ViewData["Title"] = "Çalışanlar";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var seoUrl = Context.Session.GetString("FirmaSeoUrl") ?? "TENTECI";
+    ViewBag.SirketSeoUrl = seoUrl;
 }
+
 
 @section Styles {
     <style>
@@ -36,7 +39,7 @@
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form id="addForm">
+            <form method="post" action="/@ViewBag.SirketSeoUrl/Admin/AddCalisan">
                 <div class="modal-header">
                     <h5 class="modal-title">Yeni Çalışan</h5>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
@@ -56,10 +59,12 @@
 </div>
 
 <!-- ✏️ Düzenleme Modalı -->
+<!-- ✏️ Düzenleme Modalı -->
 <div class="modal fade" id="editModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <form id="editForm">
+                <!-- ⛔️ action ve method kaldırıldı -->
                 <div class="modal-header">
                     <h5 class="modal-title">Çalışan Düzenle</h5>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
@@ -83,13 +88,16 @@
     </div>
 </div>
 
+
 @section Scripts {
-    @{
-        var seo = Context.Session.GetString("FirmaSeoUrl") ?? "TENTECI";
-    }
+    <!-- toastr.css -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <!-- toastr.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
     <script>
-        const seo = '@seo'; // Razor'dan firmaSeoUrl alınır
+        const seo = '@ViewBag.SirketSeoUrl';
 
         $(document).ready(function () {
             const table = $('#calisanTable').DataTable({
@@ -123,11 +131,13 @@
             $('#addForm').submit(function (e) {
                 e.preventDefault();
                 const formData = $(this).serialize();
-                $.post(`/${seo}/Admin/Calisan/AddCalisan`, formData, function (res) {
-                    if (res.status === 'success') {
+                $.post(`/${seo}/Admin/AddCalisan`, formData, function (res) {
+                    if (res.status === "email_exists") {
+                        toastr.error("Bu email zaten kullanılıyor.");
+                    } else if (res.status === "success") {
                         $('#addModal').modal('hide');
+                        toastr.success("Çalışan başarıyla eklendi.");
                         table.ajax.reload();
-                        alert("Çalışan eklendi.");
                     }
                 });
             });
@@ -147,45 +157,49 @@
             });
 
             // 🔁 Güncelle
-            $('#editForm').submit(function (e) {
-                e.preventDefault();
+                   // 🔁 Güncelleme
+        $('#editForm').submit(function (e) {
+            e.preventDefault();
 
-                const form = $(this);
-                const formData = {
-                    Id: form.find('input[name="Id"]').val(),
-                    AdSoyad: form.find('input[name="AdSoyad"]').val(),
-                    Email: form.find('input[name="Email"]').val(),
-                    Telefon: form.find('input[name="Telefon"]').val(),
-                    AktifMi: form.find('input[name="AktifMi"]').is(':checked')
-                };
+            const form = $(this);
+            const formData = {
+                Id: form.find('input[name="Id"]').val(),
+                AdSoyad: form.find('input[name="AdSoyad"]').val(),
+                Email: form.find('input[name="Email"]').val(),
+                Telefon: form.find('input[name="Telefon"]').val(),
+                AktifMi: form.find('input[name="AktifMi"]').is(':checked')
+            };
 
-                $.ajax({
-                    url: `/${seo}/Admin/Calisan/UpdateCalisan`,
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(formData),
-                    success: function (res) {
-                        if (res.status === 'success') {
-                            $('#editModal').modal('hide');
-                            table.ajax.reload();
-                            alert("Çalışan başarıyla güncellendi.");
-                        }
+            $.ajax({
+                url: `/${seo}/Admin/Calisan/UpdateCalisan`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function (res) {
+                    if (res.status === 'success') {
+                        $('#editModal').modal('hide');
+                        toastr.success("Çalışan başarıyla güncellendi.");
+                        table.ajax.reload();
                     }
-                });
-            });
-
-            // ❌ Sil
-            $('#calisanTable').on('click', '.delete-btn', function () {
-                const id = $(this).data('id');
-                if (confirm("Çalışanı silmek istiyor musunuz?")) {
-                    $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
-                        if (res.status === "deleted") {
-                            table.ajax.reload();
-                        }
-                    });
                 }
             });
         });
+
+
+            // ❌ Sil
+                  // ❌ Sil
+        $('#calisanTable').on('click', '.delete-btn', function () {
+            const id = $(this).data('id');
+            if (confirm("Çalışanı silmek istiyor musunuz?")) {
+                $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
+                    if (res.status === "deleted") {
+                        table.ajax.reload();
+                        toastr.success("Çalışan başarıyla silindi.");
+                    }
+                });
+            }
+        });
+
+        });
     </script>
 }
-

@@ -1,0 +1,100 @@
+﻿@{
+    Layout = null;
+    var seo = ViewBag.FirmaSeoUrl as string ?? "";
+    @await Html.PartialAsync("_KvkkModal")
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>KVKK ve ETK Onayı</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .info-box {
+            display: none;
+            margin-top: 10px;
+            padding: 15px;
+            background-color: #f1f1f1;
+            border-left: 5px solid #28a745;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+
+        .is-invalid {
+            border: 2px solid red !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="card shadow p-4">
+            <h3 class="mb-4 text-success">KVKK & Elektronik İletişim Onayı</h3>
+
+            <form method="post" action="/@seo/Admin/OnayFormu">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="firmaSeoUrl" value="@seo" />
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="kvkkCheckbox" name="KvkkOnaylandiMi" value="true" />
+                    <label class="form-check-label" for="kvkkCheckbox">
+                        KVKK Aydınlatma Metni'ni okudum, kabul ediyorum.
+                    </label>
+                    <div id="kvkkText" class="info-box">
+                        <strong>KVKK Metni:</strong> Kişisel verileriniz, 6698 sayılı Kanun kapsamında işlenmektedir.
+                        Detaylı bilgi için <a href="javascript:void(0);" data-bs-toggle="modal" data-bs-target="#kvkkModal">buraya tıklayın</a>.
+                    </div>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="etkCheckbox" name="EtkOnaylandiMi" value="true" />
+                    <label class="form-check-label" for="etkCheckbox">
+                        Elektronik ileti almayı kabul ediyorum.
+                    </label>
+                    <div id="etkText" class="info-box">
+                        <strong>Elektronik İleti:</strong> Size kampanya, yenilik ve bilgilendirmeleri iletmek amacıyla elektronik ileti gönderilebilir.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success">Devam Et</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const kvkk = document.getElementById("kvkkCheckbox");
+        const etk = document.getElementById("etkCheckbox");
+
+        kvkk.addEventListener("change", function () {
+            document.getElementById("kvkkText").style.display = this.checked ? "block" : "none";
+            this.classList.remove("is-invalid");
+        });
+
+        etk.addEventListener("change", function () {
+            document.getElementById("etkText").style.display = this.checked ? "block" : "none";
+            this.classList.remove("is-invalid");
+        });
+
+        document.querySelector("form").addEventListener("submit", function (e) {
+            let valid = true;
+
+            if (!kvkk.checked) {
+                kvkk.classList.add("is-invalid");
+                valid = false;
+            }
+
+            if (!etk.checked) {
+                etk.classList.add("is-invalid");
+                valid = false;
+            }
+
+            if (!valid) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

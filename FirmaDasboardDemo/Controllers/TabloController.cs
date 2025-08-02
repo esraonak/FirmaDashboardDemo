@@ -10,7 +10,7 @@ namespace FirmaDasboardDemo.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public TabloController(ApplicationDbContext context)
+        public TabloController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
@@ -274,5 +274,27 @@ public IActionResult TabloSilOnayla(int id)
             return Ok(new { status = "ok" });
         }
 
+
+
+        [HttpGet("{seoUrl}/api/firma-degiskenleri")]
+        public IActionResult FirmaDegiskenleriniGetir(string seoUrl)
+        {
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
+            if (firma == null) return Unauthorized();
+
+            var degiskenler = _context.FirmaDegiskenler
+                .Where(fd => fd.FirmaId == firma.Id)
+                .Select(fd => new {
+                    Ad = fd.Ad,
+                    Deger = fd.Deger
+                })
+                .ToList();
+
+            return Ok(degiskenler);
+        }
+
     }
+
+
+
 }

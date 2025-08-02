@@ -3,7 +3,6 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<h3>Tablo Düzenle</h3>
 
 <div class="form-group">
     <label>Ürün Seç</label>
@@ -14,11 +13,15 @@
     <button class="btn btn-success" onclick="aktifModuAyarla('GozuksunMu')" id="btnGozuksun">🟢 Görebilsin</button>
     <button class="btn btn-danger" onclick="aktifModuAyarla('GirdimiYapabilir')" id="btnGirebilir">✍️ Girebilsin</button>
     <button class="btn btn-secondary" onclick="aktifModuAyarla('Temizle')" id="btnTemizle">🧹 Gizli Kalsın</button>
+    <input type="text" id="formulInput" class="form-control my-2" placeholder="=A1+B1 gibi formül yazın">
+    <button id="btnFormulModu" onclick="toggleFormulaMode()" class="btn btn-warning mt-2">✏️ Formül Yaz</button>
+
+
 </div>
 
 <div id="hot" style="margin-top: 20px;"></div>
 
-<button class="btn btn-primary mt-3" onclick="guncelle()">Kaydet</button>
+<button id="btnKaydet" class="btn btn-primary mt-3" onclick="guncelle()">Kaydet</button>
 
 <style>
     .hucre-girebilir {
@@ -34,42 +37,143 @@
         font-weight: bold;
         transform: scale(1.02);
         opacity: 1;
+
+    }
+
+    .htFormulaTarget {
+        background-color: #d1f0ff !important; /* Açık turkuaz */
+        border: 2px solid #0d6efd !important; /* Bootstrap primary mavisi çerçeve */
+        box-shadow: 0 0 6px #0d6efd80 inset;
+        font-weight: bold;
+        color: #0d6efd;
     }
 </style>
-
+<!-- 1. jQuery (Toastr'dan önce gelmeli) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
+
+<!-- Toastr CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+<!-- Toastr JS (jQuery'den sonra gelmeli) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 <script>
     let hot;
     let seciliTabloId = null;
     let metaDataMap = {};
     let aktifMod = null;
+    let formulModuAktif = false;
+    let formulHedefHucre = null;
 
     document.addEventListener("DOMContentLoaded", function () {
+            toastr.options = {
+        "closeButton": false,
+        "debug": false,
+        "newestOnTop": false,
+        "progressBar": true,
+        "positionClass": "toast-top-right",
+        "preventDuplicates": false,
+        "onclick": null,
+        "showDuration": "300",
+        "hideDuration": "500",
+        "timeOut": "2500",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    };
+        toastr.options = {
+        "closeButton": true,
+        "positionClass": "toast-top-right",
+        "timeOut": "2500"
+    };
+
+
         fetch("/api/urun/tabloluurun")
             .then(res => res.json())
             .then(urunler => {
                 const select = document.getElementById("urunSec");
-                select.innerHTML = "";
                 urunler.forEach(u => {
-                    const opt = document.createElement("option");
-                    opt.value = u.id;
-                    opt.textContent = u.ad;
+                    const opt = new Option(u.ad, u.id);
                     select.appendChild(opt);
                 });
-
                 select.addEventListener("change", tabloyuGetir);
                 select.dispatchEvent(new Event("change"));
             });
+
+        document.getElementById("formulInput").addEventListener("input", function () {
+            if (formulModuAktif && formulHedefHucre) {
+                hot.setDataAtCell(formulHedefHucre.row, formulHedefHucre.col, this.value);
+            }
+        });
     });
 
-    function tabloyuGetir() {
+        function toggleFormulaMode() {
+        formulModuAktif = !formulModuAktif;
+
+        const btn = document.getElementById("btnFormulModu");
+        if (!btn) return;
+
+        if (!formulModuAktif) {
+            
+            if (formulHedefHucre) {
+                hot.setCellMeta(formulHedefHucre.row, formulHedefHucre.col, 'className', '');
+                formulHedefHucre = null;
+            }
+
+            for (let r = 0; r < hot.countRows(); r++) {
+                for (let c = 0; c < hot.countCols(); c++) {
+                    hot.setCellMeta(r, c, 'readOnly', false);
+                }
+            }
+
+            btn.classList.remove("active");
+            document.getElementById("formulInput").value = "";
+            toastr.error("🔕 Formül modu kapatıldı");
+            hot.render();
+        } else {
+           
+            btn.classList.add("active");
+            toastr.success("✏️ Hedef hücreyi seçin");
+        }
+    }
+
+
+         function tabloyuGetir() {
         const urunId = document.getElementById("urunSec").value;
+        const kaydetBtn = document.getElementById("btnKaydet");
+        const formulBtn = document.getElementById("btnFormulModu");
+
         fetch(`/Tablo/VeriGetir?urunId=${urunId}`)
             .then(res => res.json())
             .then(data => {
+                // ✅ Eğer veri yoksa veya hücre listesi boşsa
+                if (!data || !Array.isArray(data.hucreler) || data.hucreler.length === 0) {
+                    toastr.warning("⚠️ Bu ürün için oluşturulmuş bir tablo bulunamadı. Lütfen önce tablo oluşturun.");
+
+                    // 🔒 Butonları pasifleştir
+                    kaydetBtn.disabled = true;
+                    formulBtn.disabled = true;
+
+                    // 🧹 Önceki tablo varsa sil
+                    if (hot) {
+                        hot.destroy();
+                        hot = null;
+                    }
+
+                    document.getElementById("formulInput").value = "";
+                    return;
+                }
+
+                // ✅ Butonları aktif hale getir
+                kaydetBtn.disabled = false;
+                formulBtn.disabled = false;
+
+                // Tabloyu kur
                 seciliTabloId = data.tabloId;
                 const rows = [];
                 metaDataMap = {};
@@ -92,104 +196,202 @@
                 hot = new Handsontable(container, {
                     data: rows,
                     rowHeaders: true,
-                    colHeaders: ['A', 'B', 'C', 'D', 'E', 'F', 'G'],
+                    colHeaders: true,
                     formulas: { engine: HyperFormula },
+                    licenseKey: 'non-commercial-and-evaluation',
                     contextMenu: {
                         items: {
                             "gozuksun": {
                                 name: "🟢 Bayi Görebilsin",
                                 callback() {
-                                    const coords = hot.getSelectedLast();
-                                    const cell = String.fromCharCode(65 + coords[1]) + (coords[0] + 1);
-                                    metaDataMap[cell] = metaDataMap[cell] || {};
-                                    metaDataMap[cell].GozuksunMu = true;
-                                    metaDataMap[cell].GirdimiYapabilir = false;
-                                    hot.render();
+                                    markSingleCell("GozuksunMu");
                                 }
                             },
                             "girebilir": {
                                 name: "✍️ Bayi Değer Girebilsin",
                                 callback() {
-                                    const coords = hot.getSelectedLast();
-                                    const cell = String.fromCharCode(65 + coords[1]) + (coords[0] + 1);
-                                    metaDataMap[cell] = metaDataMap[cell] || {};
-                                    metaDataMap[cell].GirdimiYapabilir = true;
-                                    metaDataMap[cell].GozuksunMu = false;
-                                    hot.render();
+                                    markSingleCell("GirdimiYapabilir");
                                 }
                             },
                             "temizle": {
-                                name: "🧹 Gizli Kalsın (Temizle)",
+                                name: "🧹 Gizli Kalsın",
                                 callback() {
-                                    const coords = hot.getSelectedLast();
-                                    const cell = String.fromCharCode(65 + coords[1]) + (coords[0] + 1);
-                                    delete metaDataMap[cell];
-                                    hot.render();
+                                    markSingleCell("Temizle");
                                 }
                             },
                             "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
                             ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
                         }
                     },
-                    cells: function (row, col) {
-                        const cell = String.fromCharCode(65 + col) + (row + 1);
-                        const meta = metaDataMap[cell];
-                        const cellMeta = {};
+                    afterSelectionEnd(row, col) {
+                        if (!formulModuAktif) return;
+                        if (!formulHedefHucre) {
+                            formulHedefHucre = { row, col };
+                            const mevcutFormul = hot.getDataAtCell(row, col) || "";
+                            document.getElementById("formulInput").value = mevcutFormul;
+                            hot.setCellMeta(row, col, 'className', 'htFormulaTarget');
+                            hot.setCellMeta(row, col, 'readOnly', false);
+                            hot.render();
+                        }
+                    },
+                    afterOnCellMouseDown(event, coords) {
+                        if (!formulModuAktif || !formulHedefHucre) return;
 
-                        if (meta?.GirdimiYapabilir) {
-                            cellMeta.className = 'hucre-girebilir';
-                        } else if (meta?.GozuksunMu) {
-                            cellMeta.className = 'hucre-gozuksun';
+                        const ref = String.fromCharCode(65 + coords.col) + (coords.row + 1);
+                        const input = document.getElementById("formulInput");
+                        let mevcut = input.value.trim();
+
+                        if (mevcut === "=") {
+                            mevcut += ref;
+                        } else if (!mevcut.includes(ref)) {
+                            const son = mevcut.slice(-1);
+                            const operatorMu = ["+", "-", "*", "/"].includes(son);
+                            mevcut += (operatorMu ? "" : "+") + ref;
                         }
 
-                        return cellMeta;
+                        input.value = mevcut;
+                        hot.setDataAtCell(formulHedefHucre.row, formulHedefHucre.col, mevcut);
                     },
-                    licenseKey: 'non-commercial-and-evaluation'
+                    cells(row, col) {
+                        const cellId = String.fromCharCode(65 + col) + (row + 1);
+                        const meta = metaDataMap[cellId] || {};
+
+                        if (formulModuAktif && formulHedefHucre &&
+                            formulHedefHucre.row === row && formulHedefHucre.col === col) {
+                            return { className: 'htFormulaTarget' };
+                        }
+
+                        if (meta.GirdimiYapabilir) {
+                            return { className: 'hucre-girebilir' };
+                        }
+                        if (meta.GozuksunMu) {
+                            return { className: 'hucre-gozuksun' };
+                        }
+
+                        return {};
+                    }
                 });
+            })
+            .catch(err => {
+                console.error("Veri getirilemedi:", err);
+                toastr.error("❌ Sunucudan veri alınırken hata oluştu.");
+
+                // ❌ Hata durumunda butonları yine pasif yap
+                document.getElementById("btnKaydet").disabled = true;
+                document.getElementById("btnFormulModu").disabled = true;
             });
+    }
+
+
+
+    function markSingleCell(mode) {
+        const coords = hot.getSelectedLast();
+        if (!coords || coords.length < 2) return;
+        const row = coords[0];
+        const col = coords[1];
+        const cell = String.fromCharCode(65 + col) + (row + 1);
+
+        if (mode === "Temizle") {
+            delete metaDataMap[cell];
+            hot.setCellMeta(row, col, 'className', '');
+        } else {
+            metaDataMap[cell] = metaDataMap[cell] || {};
+            metaDataMap[cell].GozuksunMu = (mode === "GozuksunMu");
+            metaDataMap[cell].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+        }
+
+        hot.render();
+    }
+
+    function toggleMarkingMode(mode) {
+        if (aktifMod === mode) {
+            aktifMod = null;
+            toggleButtons();
+            return;
+        }
+
+        aktifMod = mode;
+        toggleButtons();
+
+        // 🎯 Toastr uyarısı
+        if (mode === "GozuksunMu") {
+            toastr.info("🟢 Görebilsin modu aktif. Hücre seçin.");
+        } else if (mode === "GirdimiYapabilir") {
+            toastr.info("✍️ Girebilir modu aktif. Hücre seçin.");
+        } else {
+            toastr.info("🧹 Gizle modu aktif. Hücre seçin.");
+        }
+
+        hot.addHookOnce('afterSelectionEnd', function (rowStart, colStart, rowEnd, colEnd) {
+            const minRow = Math.min(rowStart, rowEnd);
+            const maxRow = Math.max(rowStart, rowEnd);
+            const minCol = Math.min(colStart, colEnd);
+            const maxCol = Math.max(colStart, colEnd);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cellId = String.fromCharCode(65 + c) + (r + 1);
+                    if (mode === "Temizle") {
+                        delete metaDataMap[cellId];
+                    } else {
+                        metaDataMap[cellId] = metaDataMap[cellId] || {};
+                        metaDataMap[cellId].GozuksunMu = (mode === "GozuksunMu");
+                        metaDataMap[cellId].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+                    }
+                }
+            }
+
+            aktifMod = null;
+            toggleButtons();
+            hot.render();
+        });
     }
 
     function aktifModuAyarla(mode) {
         aktifMod = mode;
-
         document.getElementById("btnGozuksun").classList.toggle("active", mode === "GozuksunMu");
         document.getElementById("btnGirebilir").classList.toggle("active", mode === "GirdimiYapabilir");
         document.getElementById("btnTemizle").classList.toggle("active", mode === "Temizle");
 
-        alert(`"${mode}" modu aktif. Hücre seçin.`);
+           if (mode === "GozuksunMu") {
+        toastr.info("🟢 Görebilsin modu aktif. Hücre seçin.");
+    } else if (mode === "GirdimiYapabilir") {
+        toastr.info("✍️ Girebilir modu aktif. Hücre seçin.");
+    } else {
+        toastr.info("🧹 Gizle modu aktif. Hücre seçin.");
+    }
 
-            hot.addHookOnce("afterSelectionEnd", (rowStart, colStart, rowEnd, colEnd) => {
-        const minRow = Math.min(rowStart, rowEnd);
-        const maxRow = Math.max(rowStart, rowEnd);
-        const minCol = Math.min(colStart, colEnd);
-        const maxCol = Math.max(colStart, colEnd);
 
-        for (let r = minRow; r <= maxRow; r++) {
-            for (let c = minCol; c <= maxCol; c++) {
-                const cellId = String.fromCharCode(65 + c) + (r + 1);
-                if (mode === "Temizle") {
-                    delete metaDataMap[cellId];
-                    hot.setCellMeta(r, c, 'className', ''); // 👈 BU SATIRI EKLE
-                } else {
-                    metaDataMap[cellId] = metaDataMap[cellId] || {};
-                    if (mode === "GozuksunMu") {
-                        metaDataMap[cellId].GozuksunMu = true;
-                        metaDataMap[cellId].GirdimiYapabilir = false;
-                    } else if (mode === "GirdimiYapabilir") {
-                        metaDataMap[cellId].GirdimiYapabilir = true;
-                        metaDataMap[cellId].GozuksunMu = false;
+        hot.addHookOnce("afterSelectionEnd", (rowStart, colStart, rowEnd, colEnd) => {
+            const minRow = Math.min(rowStart, rowEnd);
+            const maxRow = Math.max(rowStart, rowEnd);
+            const minCol = Math.min(colStart, colEnd);
+            const maxCol = Math.max(colStart, colEnd);
+
+            for (let r = minRow; r <= maxRow; r++) {
+                for (let c = minCol; c <= maxCol; c++) {
+                    const cellId = String.fromCharCode(65 + c) + (r + 1);
+                    if (mode === "Temizle") {
+                        delete metaDataMap[cellId];
+                        hot.setCellMeta(r, c, 'className', '');
+                    } else {
+                        metaDataMap[cellId] = metaDataMap[cellId] || {};
+                        metaDataMap[cellId].GozuksunMu = (mode === "GozuksunMu");
+                        metaDataMap[cellId].GirdimiYapabilir = (mode === "GirdimiYapabilir");
                     }
                 }
             }
-        }
 
-        hot.render();
-    });
-
+            hot.render();
+        });
     }
 
     function guncelle() {
-        if (!seciliTabloId) return alert("Tablo yüklenemedi.");
+            if (!seciliTabloId) {
+        toastr.error("⚠️ Tablo yüklenemedi.");
+        return;
+    }
+
 
         const formulluVeri = hot.getSourceData();
         const hucreler = [];
@@ -218,8 +420,10 @@
         })
         .then(res => res.json())
         .then(res => {
-            if (res.status === "ok") alert("✅ Güncellendi!");
-            else alert("❌ Hata oluştu!");
+               if (res.status === "ok") toastr.success("✅ Güncellendi!");
+    else toastr.error("❌ Hata oluştu!");
+
         });
     }
 </script>
+

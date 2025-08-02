@@ -30,6 +30,8 @@ namespace FirmaDasboardDemo.Models
         public int RolId { get; set; }
         [ForeignKey("RolId")]
         public Rol Rol { get; set; }
+        public bool KvkkOnaylandiMi { get; set; } = false;
+        public bool EtkOnaylandiMi { get; set; } = false;
 
         [Required]
         [MaxLength(100)]

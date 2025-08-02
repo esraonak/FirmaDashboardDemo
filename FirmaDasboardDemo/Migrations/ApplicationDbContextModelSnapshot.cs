@@ -48,6 +48,9 @@ namespace FirmaDasboardDemo.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("EtkOnaylandiMi")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Il")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -57,6 +60,9 @@ namespace FirmaDasboardDemo.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("KvkkOnaylandiMi")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("LisansSuresiBitis")
                         .HasColumnType("datetime2");
@@ -122,6 +128,11 @@ namespace FirmaDasboardDemo.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("FacebookUrl")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<string>("Il")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -132,8 +143,18 @@ namespace FirmaDasboardDemo.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("InstagramUrl")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<DateTime>("LisansBitisTarihi")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("LogoUrl")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.Property<int>("MaxBayiSayisi")
                         .HasColumnType("int");
@@ -150,6 +171,16 @@ namespace FirmaDasboardDemo.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("TwitterUrl")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<string>("WebSitesi")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
 
                     b.HasKey("Id");
 
@@ -177,8 +208,14 @@ namespace FirmaDasboardDemo.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<bool>("EtkOnaylandiMi")
+                        .HasColumnType("bit");
+
                     b.Property<int>("FirmaId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("KvkkOnaylandiMi")
+                        .HasColumnType("bit");
 
                     b.Property<DateTime>("LisansSuresiBitis")
                         .HasColumnType("datetime2");
@@ -203,6 +240,76 @@ namespace FirmaDasboardDemo.Migrations
                     b.HasIndex("RolId");
 
                     b.ToTable("FirmaCalisanlari");
+                });
+
+            modelBuilder.Entity("FirmaDasboardDemo.Models.FirmaDegisken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Aciklama")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Ad")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<float>("Deger")
+                        .HasColumnType("real");
+
+                    b.Property<int>("FirmaId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("FirmaDegiskenler");
+                });
+
+            modelBuilder.Entity("FirmaDasboardDemo.Models.SuperAdmin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Ad")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("AktifMi")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("KayitTarihi")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RolId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Sifre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Soyad")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RolId");
+
+                    b.ToTable("SuperAdminler");
                 });
 
             modelBuilder.Entity("FormulTablosu", b =>
@@ -368,6 +475,13 @@ namespace FirmaDasboardDemo.Migrations
                     b.Navigation("Rol");
                 });
 
+            modelBuilder.Entity("FirmaDasboardDemo.Models.SuperAdmin", b =>
+                {
+                    b.HasOne("Rol", null)
+                        .WithMany("SuperAdminler")
+                        .HasForeignKey("RolId");
+                });
+
             modelBuilder.Entity("FormulTablosu", b =>
                 {
                     b.HasOne("FirmaDasboardDemo.Models.FirmaCalisani", "Calisan")
@@ -431,6 +545,8 @@ namespace FirmaDasboardDemo.Migrations
                     b.Navigation("Bayiler");
 
                     b.Navigation("Calisanlar");
+
+                    b.Navigation("SuperAdminler");
                 });
 
             modelBuilder.Entity("Urun", b =>

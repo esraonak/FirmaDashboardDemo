@@ -1,0 +1,111 @@
+﻿@{
+    ViewData["Title"] = "Lisanslar";
+    Layout = "~/Views/Shared/_SuperAdminLayout.cshtml";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Firma Lisansları</h3>
+    </div>
+    <div class="card-body">
+        <table id="lisansTablosu" class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Firma Adı</th>
+                    <th>Seo URL</th>
+                    <th>Lisans Bitiş</th>
+                    <th>Aktif</th>
+                    <th>İşlem</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+</div>
+
+<!-- Düzenleme Modalı -->
+<div class="modal fade" id="lisansModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="lisansForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Lisans Düzenle</h5>
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="firmaId" />
+                    <div class="form-group">
+                        <label>Lisans Bitiş Tarihi</label>
+                        <input type="date" class="form-control" name="lisansBitis" id="lisansBitis" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Aktif Mi?</label>
+                        <select class="form-control" name="aktifMi" id="aktifMi">
+                            <option value="true">Evet</option>
+                            <option value="false">Hayır</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Güncelle</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(function () {
+            var table = $('#lisansTablosu').DataTable({
+                ajax: {
+                    url: '/SuperAdmin/GetLisanslar',
+                    dataSrc: ''
+                },
+                columns: [
+                    { data: 'ad' },
+                    { data: 'seoUrl' },
+                    {
+                        data: 'lisansBitisTarihi',
+                        render: function (data) {
+                            return new Date(data).toLocaleDateString("tr-TR");
+                        }
+                    },
+                    {
+                        data: 'aktifMi',
+                        render: function (data) {
+                            return data ? "Evet" : "Hayır";
+                        }
+                    },
+                    {
+                        data: 'id',
+                        render: function (id, type, row) {
+                            return `<button class="btn btn-warning btn-sm editBtn" data-id="${id}" data-tarih="${row.lisansBitisTarihi}" data-aktif="${row.aktifMi}">Düzenle</button>`;
+                        }
+                    }
+                ]
+            });
+
+            // Modal açma
+            $('#lisansTablosu').on('click', '.editBtn', function () {
+                $('#firmaId').val($(this).data('id'));
+                $('#lisansBitis').val($(this).data('tarih').split('T')[0]);
+                $('#aktifMi').val($(this).data('aktif'));
+                $('#lisansModal').modal('show');
+            });
+
+            // Güncelleme
+            $('#lisansForm').submit(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '/SuperAdmin/GuncelleLisans',
+                    method: 'POST',
+                    data: $(this).serialize(),
+                    success: function () {
+                        $('#lisansModal').modal('hide');
+                        table.ajax.reload();
+                    }
+                });
+            });
+        });
+    </script>
+}

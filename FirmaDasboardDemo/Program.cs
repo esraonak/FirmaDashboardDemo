@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using FirmaDasboardDemo.Data; // DbContext sınıfının namespace’i
-
+using FirmaDasboardDemo.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // 🔗 Veritabanı bağlantısı — appsettings.json içindeki DefaultConnection alınır
@@ -11,6 +11,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddDistributedMemoryCache(); // Session için gerekli
 builder.Services.AddSession();
+builder.Services.AddHostedService<LisansKontrolServisi>();
+
 var app = builder.Build();
 
 // Hata yönetimi ve HTTPS yönlendirme
@@ -31,10 +33,16 @@ app.UseAuthorization();
 // Başlangıç route
 
 // 1️⃣ Sabit (öncelikli) yollar
+// ✅ 1. Ana Sayfa yönlendirmesi → SuperAdmin
 app.MapControllerRoute(
-    name: "admin",
-    pattern: "Admin/{action=Login}/{id?}",
-    defaults: new { controller = "Admin" });
+    name: "default",
+    pattern: "{controller=SuperAdmin}/{action=Login}/{id?}");
+
+// ✅ 2. Sabit yollar (standart admin/çalışan/bayi)
+app.MapControllerRoute(
+    name: "superadmin",
+    pattern: "SuperAdmin/{action=Login}/{id?}",
+    defaults: new { controller = "SuperAdmin" });
 
 app.MapControllerRoute(
     name: "bayi",
@@ -46,43 +54,46 @@ app.MapControllerRoute(
     pattern: "Calisan/{action=Login}/{id?}",
     defaults: new { controller = "Calisan" });
 
+// ✅ 3. SEO URL'li yapılar (firma bazlı girişler)
 
-// 2️⃣ FirmaSeoUrl ile ÇALIŞAN paneli için
+// ÇALIŞAN paneli için SEO url
 app.MapControllerRoute(
     name: "firmaAdmin",
     pattern: "{firmaSeoUrl}/Admin/{action=Login}",
     defaults: new { controller = "Calisan" });
 
-
-// 3️⃣ FirmaSeoUrl ile BAYİ login + dashboard için
+// BAYİ dashboard
 app.MapControllerRoute(
     name: "firmaBayiDashboard",
     pattern: "{firmaSeoUrl}/Dashboard",
     defaults: new { controller = "BayiSayfasi", action = "Dashboard" });
 
-app.MapControllerRoute(
-    name: "firmaBayiLogin",
-    pattern: "{firmaSeoUrl}",
-    defaults: new { controller = "BayiSayfasi", action = "Login" });
-
-
-// 4️⃣ Fallback (gerekirse)
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Admin}/{action=Login}/{id?}");
-
+// BAYİ Login (ana giriş)
 app.MapControllerRoute(
     name: "firmaBayiRoutes",
     pattern: "{firmaSeoUrl}/Bayi/{action=Login}/{id?}",
     defaults: new { controller = "Bayi" });
+
+// CALISAN işlemleri
 app.MapControllerRoute(
     name: "firmaCalisan",
     pattern: "{firmaSeoUrl}/Calisan/{action=Calisanlar}/{id?}",
     defaults: new { controller = "Calisan" });
+
+// FORMÜL işlemleri
 app.MapControllerRoute(
     name: "firmaTablo",
     pattern: "{firmaSeoUrl}/Tablo/{action=TabloOlustur}/{id?}",
     defaults: new { controller = "Tablo" });
+
+// ✅ 4. En SONA AL: SEO url'li bayi login (boş URL'yi engellemesin)
+app.MapControllerRoute(
+        name: "firmaBayiLogin",
+    pattern: "{firmaSeoUrl:regex(^((?!SuperAdmin|Bayi|Calisan).)*$)}",
+    defaults: new { controller = "BayiSayfasi", action = "Login" });
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Site}/{action=Index}/{id?}");
 
 // ✅ Seed verilerini ekle
 

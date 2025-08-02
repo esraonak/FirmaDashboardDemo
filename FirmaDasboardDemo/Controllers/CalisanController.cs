@@ -12,7 +12,7 @@ namespace FirmaDashboardDemo.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public CalisanController(ApplicationDbContext context)
+        public CalisanController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
@@ -28,18 +28,19 @@ namespace FirmaDashboardDemo.Controllers
                 .FirstOrDefault(f => f.SeoUrl.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase));
 
             if (firma == null || !firma.AktifMi)
-                return Content("Geçersiz firma bağlantısı.");
-
-            // Session’a yaz
-            HttpContext.Session.SetInt32("FirmaId", firma.Id);
-            HttpContext.Session.SetString("FirmaAd", firma.Ad);
-            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+            {
+                TempData["LoginError"] = "Lisans süreniz dolmuştur. Lütfen yönetici ile iletişime geçin.";
+                return View();
+            }
 
             // ❗️ViewBag ile View’a gönder
-            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+            ViewBag.FirmaSeoUrl = firma.SeoUrl;
+            ViewBag.FirmaAdi = firma.Ad;
+            ViewBag.LogoUrl = string.IsNullOrEmpty(firma.LogoUrl) ? "/img/default-logo.png" : firma.LogoUrl;
 
             return View();
         }
+
 
 
         [HttpPost("Login")]
@@ -64,7 +65,6 @@ namespace FirmaDashboardDemo.Controllers
                 ViewBag.Error = "Geçersiz kullanıcı adı veya şifre.";
                 return View();
             }
-
             // Session kayıtları
             HttpContext.Session.SetString("UserRole", "Calisan");
             HttpContext.Session.SetInt32("UserId", calisan.Id);
@@ -72,6 +72,13 @@ namespace FirmaDashboardDemo.Controllers
             HttpContext.Session.SetString("FirmaAd", firma.Ad);
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
 
+            // ➕ KVKK & ETK onay kontrolü
+            if (!calisan.KvkkOnaylandiMi || !calisan.EtkOnaylandiMi)
+            {
+                return RedirectToAction("OnayFormu", "Calisan", new { firmaSeoUrl = firma.SeoUrl });
+            }
+
+            // 🟢 Her şey yolundaysa dashboard'a yönlendir
             return Redirect("/" + firmaSeoUrl + "/Admin/Dashboard");
         }
 
@@ -139,29 +146,150 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(calisanlar);
         }
+        [HttpGet("KullaniciAyar")]
+        public IActionResult KullaniciAyar()
+        {
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null) return RedirectToAction("Login", "Calisan");
+
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
+            if (firma == null) return NotFound();
+
+            ViewBag.Instagram = firma.InstagramUrl;
+            ViewBag.Twitter = firma.TwitterUrl;
+            ViewBag.Facebook = firma.FacebookUrl;
+            ViewBag.Web = firma.WebSitesi;
+            ViewBag.LogoUrl = firma.LogoUrl;
+
+            // ❗️Route desteği için bu gerekli
+            ViewBag.SirketSeoUrl = firma.SeoUrl;
+
+            return View();
+        }
 
 
-        // ✅ Yeni çalışan ekle
-        [HttpPost]
+        [HttpPost("SifreGuncelle")]
+        public IActionResult SifreGuncelle(string MevcutSifre, string YeniSifre, string YeniSifreTekrar)
+        {
+            var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            int? userId = HttpContext.Session.GetInt32("UserId");
+
+            if (firmaId == null || userId == null)
+                return RedirectToAction("Login");
+
+            var calisan = _context.FirmaCalisanlari.FirstOrDefault(c => c.Id == userId);
+            if (calisan == null)
+                return NotFound();
+
+            if (calisan.Sifre != MevcutSifre)
+            {
+                TempData["Error"] = "Mevcut şifre yanlış.";
+                
+                return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+            }
+
+            if (YeniSifre != YeniSifreTekrar)
+            {
+                TempData["Error"] = "Yeni şifreler eşleşmiyor.";
+                return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+            }
+
+            calisan.Sifre = YeniSifre;
+            _context.SaveChanges();
+
+            TempData["Success"] = "Şifreniz başarıyla güncellendi.";
+
+            // 🔄 Doğru SEO URL yönlendirmesi
+
+            return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+        }
+
+
+        [HttpPost("SosyalMedyaGuncelle")]
+        public IActionResult SosyalMedyaGuncelle(string InstagramUrl, string TwitterUrl, string FacebookUrl, string WebSitesi)
+        {
+            var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null) return RedirectToAction("Login", "Calisan");
+
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
+            if (firma == null) return NotFound();
+
+            firma.InstagramUrl = InstagramUrl;
+            firma.TwitterUrl = TwitterUrl;
+            firma.FacebookUrl = FacebookUrl;
+            firma.WebSitesi = WebSitesi;
+
+            _context.SaveChanges();
+
+            TempData["Success"] = "Sosyal medya bağlantıları güncellendi.";
+            return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+        }
+        [HttpPost("LogoGuncelle")]
+        public async Task<IActionResult> LogoGuncelle(IFormFile LogoFile)
+        {
+            var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null) return RedirectToAction("Login", "Calisan");
+
+            if (LogoFile == null || LogoFile.Length == 0)
+            {
+                TempData["Error"] = "Lütfen bir logo dosyası seçin.";
+                return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+            }
+
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
+            if (firma == null) return NotFound();
+
+            var uzanti = Path.GetExtension(LogoFile.FileName);
+            var fileName = $"firma_{firma.Id}_logo{uzanti}";
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", fileName);
+
+            using (var stream = new FileStream(path, FileMode.Create))
+            {
+                await LogoFile.CopyToAsync(stream);
+            }
+
+            firma.LogoUrl = "/uploads/" + fileName;
+            _context.SaveChanges();
+
+            TempData["Success"] = "Logo başarıyla güncellendi.";
+            return Redirect("/" + firmaSeo + "/Admin/KullaniciAyar");
+        }
+
+
+        [HttpPost("AddCalisan")]
         public IActionResult AddCalisan(FirmaCalisani model)
         {
+            var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null) return Unauthorized();
-            var calisanrol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
-            if (calisanrol == null)
+
+            bool emailExists = _context.FirmaCalisanlari.Any(c => c.Email == model.Email)
+                || _context.Firmalar.Any(f => f.Email == model.Email)
+                || _context.Bayiler.Any(b => b.Email == model.Email);
+
+            if (emailExists)
+                return Json(new { status = "email_exists" });
+
+            var calisanRol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
+            if (calisanRol == null)
                 return BadRequest(new { status = "role_not_found" });
+
             model.FirmaId = firmaId.Value;
-            model.Sifre = "1234"; // default şifre
+            model.Sifre = "1234";
             model.AktifMi = true;
-            model.RolId = calisanrol.Id;
+            model.RolId = calisanRol.Id;
+
             _context.FirmaCalisanlari.Add(model);
             _context.SaveChanges();
 
-            return Json(new { status = "success" });
+            return Redirect("/" + firmaSeo + "/Admin/Calisan/Calisanlar");
         }
 
-        // ✅ Güncelleme
-        [HttpPost]
+
+        [HttpPost("Calisan/UpdateCalisan")]
         public IActionResult UpdateCalisan([FromBody] FirmaCalisani model)
         {
             var calisan = _context.FirmaCalisanlari.FirstOrDefault(x => x.Id == model.Id);
@@ -179,8 +307,8 @@ namespace FirmaDashboardDemo.Controllers
         }
 
         // ✅ Silme
-        [HttpPost]
-        public IActionResult DeleteCalisan(int id)
+        [HttpPost("Calisan/DeleteCalisan")]
+        public IActionResult DeleteCalisan([FromForm] int id)
         {
             var calisan = _context.FirmaCalisanlari.FirstOrDefault(x => x.Id == id);
             if (calisan == null)
@@ -192,8 +320,10 @@ namespace FirmaDashboardDemo.Controllers
             return Json(new { status = "deleted" });
         }
 
+
+
         // ✅ ID ile çalışan getir
-        [HttpGet]
+        [HttpGet("Calisan/GetCalisanById/{id}")]
         public IActionResult GetCalisanById(int id)
         {
             var calisan = _context.FirmaCalisanlari
@@ -213,5 +343,31 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(calisan);
         }
+
+        [HttpGet("OnayFormu")]
+        public IActionResult OnayFormu(string firmaSeoUrl)
+        {
+            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+            return View();
+        }
+
+        [HttpPost("OnayFormu")]
+        [ValidateAntiForgeryToken]
+        public IActionResult OnayFormu(string firmaSeoUrl, bool KvkkOnaylandiMi, bool EtkOnaylandiMi)
+        {
+            int? userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null) return RedirectToAction("Login", new { firmaSeoUrl });
+
+            var calisan = _context.FirmaCalisanlari.FirstOrDefault(x => x.Id == userId);
+            if (calisan == null) return RedirectToAction("Login", new { firmaSeoUrl });
+
+            calisan.KvkkOnaylandiMi = KvkkOnaylandiMi;
+            calisan.EtkOnaylandiMi = EtkOnaylandiMi;
+            _context.SaveChanges();
+
+            return Redirect("/" + firmaSeoUrl + "/Admin/Dashboard");
+        }
+
+
     }
 }

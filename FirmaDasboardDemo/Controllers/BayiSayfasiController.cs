@@ -13,7 +13,7 @@ namespace FirmaDashboardDemo.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public BayiSayfasiController(ApplicationDbContext context)
+        public BayiSayfasiController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
@@ -30,15 +30,18 @@ namespace FirmaDashboardDemo.Controllers
                 .FirstOrDefault(f => f.SeoUrl.Equals(firmaSeoUrl, StringComparison.OrdinalIgnoreCase));
 
             if (firma == null || !firma.AktifMi)
-                return Content("Geçersiz firma bağlantısı.");
+            {
+                TempData["LoginError"] = "Lisans süreniz dolmuştur. Lütfen yönetici ile iletişime geçin.";
+                return RedirectToAction("Login", new { firmaSeoUrl }); // 🔁 recursive redirect, doğru parametreyle
+            }
 
             // ✅ Session’a firma bilgilerini ve kullanıcı rolünü yaz
             HttpContext.Session.SetInt32("FirmaId", firma.Id);
             HttpContext.Session.SetString("FirmaAd", firma.Ad);
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
-            HttpContext.Session.SetString("UserRole", "Bayi"); // ❗️EKLENDİ
+            HttpContext.Session.SetString("FirmaLogo", firma.LogoUrl ?? ""); // 🔁 logo destekli
+            HttpContext.Session.SetString("UserRole", "Bayi");
 
-            // ✅ Layout için ViewBag başlık
             ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} BAYİ PANELİ";
 
             return View();
@@ -54,25 +57,42 @@ namespace FirmaDashboardDemo.Controllers
                 return View();
             }
 
-            // ✅ Zorunlu Session kayıtları
+            // 🔐 FirmaSeoUrl session’dan alınmalı (önceki GET çağrısından)
+            var firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl");
+            if (string.IsNullOrEmpty(firmaSeoUrl))
+                return Content("Firma bilgisi eksik.");
+
+            // 🔍 SeoUrl ile firmayı bul
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == firmaSeoUrl && f.AktifMi);
+            if (firma == null)
+                return Content("Firma bulunamadı.");
+
+            // 🔁 Bu bayi o firmayla eşleşiyor mu? (BayiFirma tablosundan kontrol)
+            var eslesmeVarMi = _context.BayiFirmalari
+                .Any(bf => bf.BayiId == bayi.Id && bf.FirmaId == firma.Id);
+            if (!eslesmeVarMi)
+                return Content("Bu firmayla ilişkilendirilmiş bayi hesabı bulunamadı.");
+
+            // ✅ Session kayıtları
             HttpContext.Session.SetInt32("UserId", bayi.Id);
             HttpContext.Session.SetInt32("RolId", bayi.RolId);
             HttpContext.Session.SetString("UserAd", bayi.Ad);
-            HttpContext.Session.SetString("UserRole", "Bayi"); // ❗️EKLENDİ
+            HttpContext.Session.SetString("UserRole", "Bayi");
 
-            // ✅ Firma bilgisini session'dan al
-            var firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl");
-            if (string.IsNullOrEmpty(firmaSeoUrl))
+            HttpContext.Session.SetInt32("FirmaId", firma.Id);
+            HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
+            HttpContext.Session.SetString("FirmaAd", firma.Ad);
+            HttpContext.Session.SetString("FirmaLogo", firma.LogoUrl ?? "");
+
+            // ✅ KVKK & ETK kontrol
+            if (!bayi.KvkkOnaylandiMi || !bayi.EtkOnaylandiMi)
             {
-                return Content("Firma bilgisi eksik.");
+                return RedirectToAction("OnayFormu", "BayiSayfasi", new { firmaSeoUrl = firma.SeoUrl });
             }
 
-            // (İsteğe bağlı) Panel başlığı ayarlanabilir ama View’a dönülmediği için zorunlu değil
-            ViewBag.PanelBaslik = $"{firmaSeoUrl.ToUpper()} BAYİ PANELİ";
-
-            // ✅ Dashboard’a yönlendir
-            return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
+            return Redirect("/" + firma.SeoUrl + "/Bayi/Dashboard");
         }
+
 
 
         [HttpGet("Dashboard")]
@@ -165,7 +185,73 @@ namespace FirmaDashboardDemo.Controllers
                 grid
             });
         }
-    
+        [HttpGet("KullaniciAyar")]
+        public IActionResult KullaniciAyar()
+        {
+
+            return View();
+        }
+
+        [HttpPost("KullaniciAyar")]
+        public IActionResult KullaniciAyarGuncelle(string EskiSifre, string YeniSifre, string YeniSifreTekrar)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            if (bayiId == null)
+                return RedirectToAction("Login");
+
+            var bayi = _context.Bayiler.Find(bayiId);
+            if (bayi == null)
+            {
+                TempData["Error"] = "Bayi bulunamadı.";
+                return RedirectToAction("KullaniciAyar");
+            }
+
+            if (bayi.Sifre != EskiSifre)
+            {
+                TempData["Error"] = "Mevcut şifre hatalı.";
+                return RedirectToAction("KullaniciAyar");
+            }
+
+            if (YeniSifre != YeniSifreTekrar)
+            {
+                TempData["Error"] = "Yeni şifreler uyuşmuyor.";
+                return RedirectToAction("KullaniciAyar");
+            }
+
+            bayi.Sifre = YeniSifre;
+            _context.SaveChanges();
+
+            TempData["Success"] = "Şifre başarıyla güncellendi.";
+            return RedirectToAction("KullaniciAyar");
+        }
+
+
+        [HttpGet("OnayFormu")]
+        public IActionResult OnayFormu(string firmaSeoUrl)
+        {
+            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+            return View();
+        }
+
+        [HttpPost("OnayFormu")]
+        [ValidateAntiForgeryToken]
+        public IActionResult OnayFormu(string firmaSeoUrl, bool KvkkOnaylandiMi, bool EtkOnaylandiMi)
+        {
+            int? userId = HttpContext.Session.GetInt32("UserId");
+            if (userId == null)
+                return RedirectToAction("Login", "BayiSayfasi", new { firmaSeoUrl });
+
+            var bayi = _context.Bayiler.FirstOrDefault(b => b.Id == userId);
+            if (bayi == null)
+                return RedirectToAction("Login", "BayiSayfasi", new { firmaSeoUrl });
+
+            bayi.KvkkOnaylandiMi = KvkkOnaylandiMi;
+            bayi.EtkOnaylandiMi = EtkOnaylandiMi;
+
+            _context.SaveChanges();
+
+            return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
+        }
 
 
 

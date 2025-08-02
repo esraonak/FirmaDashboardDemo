@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace FirmaDasboardDemo.Pages.Views.Admin
+namespace FirmaDasboardDemo.Views.SuperAdmin
 {
-    public class DashboardModel : PageModel
+    public class CalisanlarModel : PageModel
     {
         public void OnGet()
         {

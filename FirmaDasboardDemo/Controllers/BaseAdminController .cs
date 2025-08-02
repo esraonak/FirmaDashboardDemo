@@ -1,15 +1,20 @@
-﻿using Microsoft.AspNetCore.Mvc.Filters;
+﻿using FirmaDasboardDemo.Data;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 
 public class BaseAdminController : Controller
 {
+    private readonly ApplicationDbContext _context;
+
+    public BaseAdminController(ApplicationDbContext context)
+    {
+        _context = context;
+    }
+
     public override void OnActionExecuting(ActionExecutingContext context)
     {
-        var routeData = context.RouteData;
-        var action = routeData.Values["action"]?.ToString()?.ToLower();
-        var controller = routeData.Values["controller"]?.ToString()?.ToLower();
+        var action = context.RouteData.Values["action"]?.ToString()?.ToLower();
 
-        // Login ve Logout işlemlerine müdahale etme
         if (action == "login" || action == "logout")
         {
             base.OnActionExecuting(context);
@@ -17,15 +22,25 @@ public class BaseAdminController : Controller
         }
 
         var userRole = context.HttpContext.Session.GetString("UserRole");
-        var firmaSeoUrl = context.HttpContext.Session.GetString("FirmaSeoUrl") ?? "TENTECI";
+        var firmaId = context.HttpContext.Session.GetInt32("FirmaId");
 
-        if (userRole != "Calisan")
+        if (userRole != "Calisan" || firmaId == null)
         {
-            context.Result = new RedirectToActionResult("Login", "Calisan", new { firmaSeoUrl });
+            var seo = context.HttpContext.Session.GetString("FirmaSeoUrl") ?? "tente";
+            context.Result = new RedirectToActionResult("Login", "Calisan", new { firmaSeoUrl = seo });
             return;
+        }
+
+        // Firma bilgilerini çek
+        var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
+        if (firma != null)
+        {
+            ViewBag.FirmaLogo = firma.LogoUrl;
+            ViewBag.FirmaAd = firma.Ad;
+            ViewBag.FirmaSeoUrl = firma.SeoUrl;
+            ViewBag.UserRole = userRole;
         }
 
         base.OnActionExecuting(context);
     }
-
 }

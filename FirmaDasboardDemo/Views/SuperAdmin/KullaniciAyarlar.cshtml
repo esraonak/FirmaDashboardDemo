@@ -1,0 +1,68 @@
+﻿@{
+    ViewData["Title"] = "Kullanıcı Ayarları";
+    Layout = "~/Views/Shared/_SuperAdminLayout.cshtml";
+}
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Şifre Güncelle</h3>
+    </div>
+    <div class="card-body">
+        <form id="sifreGuncelleForm">
+            <div class="form-group">
+                <label>Eski Şifre</label>
+                <input type="password" class="form-control" name="EskiSifre" required />
+            </div>
+            <div class="form-group">
+                <label>Yeni Şifre</label>
+                <input type="password" class="form-control" id="YeniSifre" name="YeniSifre" required />
+            </div>
+            <div class="form-group">
+                <label>Yeni Şifre (Tekrar)</label>
+                <input type="password" class="form-control" id="YeniSifreTekrar" name="YeniSifreTekrar" required />
+                <small id="sifreUyari" class="form-text text-danger" style="display:none;">Şifreler uyuşmuyor</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Güncelle</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ✅ Anlık uyuşma kontrolü
+        $('#YeniSifre, #YeniSifreTekrar').on('input', function () {
+            const sifre = $('#YeniSifre').val();
+            const tekrar = $('#YeniSifreTekrar').val();
+
+            if (sifre !== tekrar) {
+                $('#sifreUyari').show();
+            } else {
+                $('#sifreUyari').hide();
+            }
+        });
+
+        // ✅ Submit ve yönlendirme
+        $('#sifreGuncelleForm').submit(function (e) {
+            e.preventDefault();
+
+            const sifre = $('#YeniSifre').val();
+            const tekrar = $('#YeniSifreTekrar').val();
+            if (sifre !== tekrar) {
+                alert("Yeni şifreler uyuşmuyor.");
+                return;
+            }
+
+            const formData = $(this).serialize();
+            $.post('/SuperAdmin/GuncelleSifre', formData, function (res) {
+                       if (res.status === 'success') {
+            alert(res.message);
+            window.location.href = '/SuperAdmin/Dashboard';
+        } else {
+            alert(res.message); // hata durumunda yönlendirme yapılmaz
+        }
+
+            });
+        });
+    </script>
+}
+

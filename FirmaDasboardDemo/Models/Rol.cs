@@ -8,9 +8,12 @@ public class Rol
 
     [Required]
     [MaxLength(50)]
-    public string Ad { get; set; }
+    public string Ad { get; set; } // Örnek: "SuperAdmin", "Calisan", "Bayi"
 
-    // Navigation
+    // Navigation Properties
     public ICollection<FirmaCalisani> Calisanlar { get; set; }
     public ICollection<Bayi> Bayiler { get; set; }
+
+    // (Eğer SuperAdmin de kullanıcı tablosundan gelecekse ekle)
+    public ICollection<SuperAdmin> SuperAdminler { get; set; }
 }

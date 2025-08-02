@@ -25,6 +25,9 @@ namespace FirmaDasboardDemo.Models
         [ForeignKey("RolId")]
         public Rol Rol { get; set; }
 
+        public bool KvkkOnaylandiMi { get; set; } = false;
+        public bool EtkOnaylandiMi { get; set; } = false;
+
         // Foreign Key
         public int FirmaId { get; set; }
         public bool AktifMi { get; set; }

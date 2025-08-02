@@ -1,0 +1,150 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TenteCRM - Sizin İçin Tasarlandı</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #f9f9f9;
+            color: #333;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0088cc, #00b894);
+            color: white;
+            padding: 100px 20px;
+            text-align: center;
+        }
+
+            .hero h1 {
+                font-size: 48px;
+                margin-bottom: 20px;
+            }
+
+            .hero p {
+                font-size: 20px;
+                margin-bottom: 30px;
+            }
+
+            .hero .cta-buttons button {
+                background: white;
+                color: #00a8ff;
+                border: none;
+                padding: 15px 25px;
+                margin: 10px;
+                font-size: 16px;
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+                .hero .cta-buttons button:hover {
+                    background: #f0f0f0;
+                }
+
+        .section {
+            padding: 80px 20px;
+            text-align: center;
+        }
+
+            .section h2 {
+                font-size: 36px;
+                margin-bottom: 30px;
+            }
+
+        .feature-grid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+        }
+
+        .feature {
+            background: white;
+            padding: 30px;
+            width: 250px;
+            border-radius: 12px;
+            box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+        }
+
+            .feature i {
+                font-size: 36px;
+                color: #00b894;
+                margin-bottom: 15px;
+            }
+
+        .whatsapp-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 100;
+        }
+
+            .whatsapp-button a {
+                background: #25D366;
+                color: white;
+                padding: 15px 20px;
+                border-radius: 50px;
+                text-decoration: none;
+                font-size: 18px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+    </style>
+</head>
+<body>
+
+    <!-- Hero Bölümü -->
+    <section class="hero" data-aos="fade-up">
+        <h1>Bayilerinize Özel Teklifler Sunmanın En Kolay Yolu!</h1>
+        <p>Dinamik hesaplama tabloları, yetkilendirme sistemi ve daha fazlası TenteCRM ile</p>
+        <div class="cta-buttons">
+            <button onclick="window.location.href='/Login'">Ücretsiz Dene</button>
+            <button onclick="window.open('https://wa.me/905555555555','_blank')">WhatsApp ile Sor</button>
+        </div>
+    </section>
+
+    <!-- Özellikler Bölümü -->
+    <section class="section" data-aos="fade-up">
+        <h2>Öne Çıkan Özellikler</h2>
+        <div class="feature-grid">
+            <div class="feature" data-aos="zoom-in">
+                <i class="fas fa-calculator"></i>
+                <h4>Formül Hesaplama</h4>
+                <p>Bayiler kendi verilerini girerek anında fiyat hesaplayabilir.</p>
+            </div>
+            <div class="feature" data-aos="zoom-in" data-aos-delay="100">
+                <i class="fas fa-user-lock"></i>
+                <h4>Yetki Yönetimi</h4>
+                <p>Her bayiye özel erişim, görünürlük ve işlem izinleri.</p>
+            </div>
+            <div class="feature" data-aos="zoom-in" data-aos-delay="200">
+                <i class="fas fa-mobile-alt"></i>
+                <h4>Mobil Uyumlu</h4>
+                <p>Mobilde, tablette ve her cihazda sorunsuz deneyim.</p>
+            </div>
+            <div class="feature" data-aos="zoom-in" data-aos-delay="300">
+                <i class="fas fa-cloud"></i>
+                <h4>Bulut Altyapı</h4>
+                <p>Verileriniz güvenli ve erişilebilir şekilde saklanır.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- WhatsApp Canlı Destek Butonu -->
+    <div class="whatsapp-button">
+        <a href="https://wa.me/905555555555" target="_blank">
+            <i class="fab fa-whatsapp"></i> Canlı Destek
+        </a>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init();
+    </script>
+</body>
+</html>

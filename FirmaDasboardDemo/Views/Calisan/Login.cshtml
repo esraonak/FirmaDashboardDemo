@@ -6,14 +6,29 @@
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
-    <title>Çalışan Giriş</title>
+    <title>@ViewBag.FirmaAdi Giriş Portalı</title>
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css">
     <link rel="stylesheet" href="~/plugins/icheck-bootstrap/icheck-bootstrap.min.css">
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css">
+    <style>
+        .firma-logo {
+            max-width: 120px;
+            max-height: 120px;
+            margin-bottom: 10px;
+        }
+    </style>
 </head>
 <body class="hold-transition login-page">
-    <div class="login-box">
-        <div class="login-logo"><b>Çalışan</b> Giriş</div>
+    <div class="login-box text-center">
+
+        @* Firma Logosu *@
+        <img src="@ViewBag.LogoUrl" alt="Logo" class="firma-logo rounded-circle" />
+
+        @* Firma Başlığı *@
+        <div class="login-logo">
+            <b>@ViewBag.FirmaAdi</b> Giriş Portalı
+        </div>
+
         <div class="card">
             <div class="card-body login-card-body">
                 <p class="login-box-msg">Lütfen giriş yapın</p>
@@ -24,8 +39,6 @@
                 }
 
                 <form asp-controller="Calisan" asp-action="Login" asp-route-firmaSeoUrl="@ViewBag.FirmaSeoUrl" method="post">
-
-
                     <div class="input-group mb-3">
                         <input type="text" name="Username" class="form-control" placeholder="Email" required />
                         <div class="input-group-append"><div class="input-group-text"><span class="fas fa-user"></span></div></div>
@@ -46,5 +59,13 @@
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            var mesaj = '@TempData["LoginError"]';
+            if (mesaj && mesaj !== "") {
+                alert(mesaj);
+            }
+        });
+    </script>
 </body>
 </html>

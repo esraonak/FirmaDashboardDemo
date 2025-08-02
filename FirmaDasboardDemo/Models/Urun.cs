@@ -17,6 +17,6 @@ public class Urun
     public int FirmaId { get; set; }
     [ForeignKey("FirmaId")]
     public Firma Firma { get; set; }
-
+ 
     public ICollection<FormulTablosu> FormulTablolari { get; set; }
 }

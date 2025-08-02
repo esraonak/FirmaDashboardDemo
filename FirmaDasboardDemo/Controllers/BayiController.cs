@@ -11,7 +11,7 @@ namespace FirmaDashboardDemo.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public BayiController(ApplicationDbContext context)
+        public BayiController(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
@@ -76,17 +76,28 @@ namespace FirmaDashboardDemo.Controllers
             if (firmaId == null)
                 return Unauthorized();
 
+            // ✅ Aynı email varsa uyarı dön
+            bool emailExists = _context.Bayiler.Any(b => b.Email == model.Email)
+                || _context.Firmalar.Any(f => f.Email == model.Email)
+                || _context.FirmaCalisanlari.Any(c => c.Email == model.Email);
+
+            if (emailExists)
+            {
+                return Json(new { status = "email_exists" });
+            }
+
             var bayiRol = _context.Roller.FirstOrDefault(r => r.Ad == "Bayi");
             if (bayiRol == null)
                 return BadRequest(new { status = "role_not_found" });
 
-            model.Sifre = "1234";
+            model.Sifre = "1234"; // default şifre
             model.AktifMi = true;
             model.RolId = bayiRol.Id;
 
             _context.Bayiler.Add(model);
             _context.SaveChanges();
 
+            // BayiFirma ilişkisi kaydediliyor
             _context.BayiFirmalari.Add(new BayiFirma
             {
                 BayiId = model.Id,
@@ -96,6 +107,7 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(new { status = "success" });
         }
+
 
         [HttpPost("{firmaSeoUrl}/Admin/Bayi/SaveBayiler")]
         public IActionResult SaveBayiler(string firmaSeoUrl, [FromBody] JsonElement data)

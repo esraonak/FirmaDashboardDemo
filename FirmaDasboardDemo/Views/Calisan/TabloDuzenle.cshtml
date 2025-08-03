@@ -48,17 +48,12 @@
         color: #0d6efd;
     }
 </style>
-<!-- 1. jQuery (Toastr'dan önce gelmeli) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/hyperformula@1.5.0/dist/hyperformula.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
-<!-- Toastr CSS -->
-<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
 
-<!-- Toastr JS (jQuery'den sonra gelmeli) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
 <script>
     let hot;
@@ -386,44 +381,62 @@
         });
     }
 
-    function guncelle() {
-            if (!seciliTabloId) {
-        toastr.error("⚠️ Tablo yüklenemedi.");
-        return;
-    }
+        function guncelle() {
+        if (!seciliTabloId) {
+            toastr.error("⚠️ Tablo yüklenemedi.");
+            return;
+        }
 
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: 'Bayinin görmesini ve giriş yapmasını istediğiniz hücrelerin yukarıda tanımlandığından emin misiniz?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Evet, Güncelle',
+            cancelButtonText: 'İptal',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#dc3545'
+        }).then((result) => {
+            if (!result.isConfirmed) return;
 
-        const formulluVeri = hot.getSourceData();
-        const hucreler = [];
+            const formulluVeri = hot.getSourceData();
+            const hucreler = [];
 
-        formulluVeri.forEach((row, i) => {
-            row.forEach((value, j) => {
-                const hucreAdi = String.fromCharCode(65 + j) + (i + 1);
-                const meta = metaDataMap[hucreAdi] || {};
-                hucreler.push({
-                    HucreAdi: hucreAdi,
-                    Formul: value,
-                    IsFormul: typeof value === 'string' && value.trim().startsWith("="),
-                    GozuksunMu: meta.GirdimiYapabilir ? true : (meta.GozuksunMu ?? false),
-                    GirdimiYapabilir: meta.GirdimiYapabilir === true
+            formulluVeri.forEach((row, i) => {
+                row.forEach((value, j) => {
+                    const hucreAdi = String.fromCharCode(65 + j) + (i + 1);
+                    const meta = metaDataMap[hucreAdi] || {};
+                    hucreler.push({
+                        HucreAdi: hucreAdi,
+                        Formul: value,
+                        IsFormul: typeof value === 'string' && value.trim().startsWith("="),
+                        GozuksunMu: meta.GirdimiYapabilir ? true : (meta.GozuksunMu ?? false),
+                        GirdimiYapabilir: meta.GirdimiYapabilir === true
+                    });
                 });
             });
-        });
 
-        fetch('/Tablo/Guncelle', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                TabloId: seciliTabloId,
-                Hucreler: hucreler
+            fetch('/Tablo/Guncelle', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    TabloId: seciliTabloId,
+                    Hucreler: hucreler
+                })
             })
-        })
-        .then(res => res.json())
-        .then(res => {
-               if (res.status === "ok") toastr.success("✅ Güncellendi!");
-    else toastr.error("❌ Hata oluştu!");
-
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === "ok") {
+                        Swal.fire("Güncellendi", "Tablo başarıyla güncellendi.", "success");
+                    } else {
+                        Swal.fire("Hata", "Güncelleme sırasında bir hata oluştu.", "error");
+                    }
+                })
+                .catch(() => {
+                    Swal.fire("Sunucu Hatası", "İşlem sırasında sunucu hatası oluştu.", "error");
+                });
         });
     }
+
 </script>
 

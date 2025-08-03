@@ -76,16 +76,35 @@ namespace FirmaDashboardDemo.Controllers
             if (firmaId == null)
                 return Unauthorized();
 
-            // ✅ Aynı email varsa uyarı dön
-            bool emailExists = _context.Bayiler.Any(b => b.Email == model.Email)
-                || _context.Firmalar.Any(f => f.Email == model.Email)
-                || _context.FirmaCalisanlari.Any(c => c.Email == model.Email);
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
+            if (firma == null)
+                return BadRequest(new { status = "firma_not_found" });
 
-            if (emailExists)
+            // ✅ Lisans bayi limiti kontrolü
+            int mevcutBayiSayisi = _context.BayiFirmalari.Count(bf => bf.FirmaId == firma.Id);
+            if (mevcutBayiSayisi >= firma.MaxBayiSayisi)
+            {
+                return Json(new { status = "max_bayi_limit" });
+            }
+
+            // ✅ E-mail sadece bu firmaya ait bayiler ve çalışanlar arasında kontrol edilir
+            bool emailExists =
+                _context.Bayiler
+                    .Any(b => b.Email == model.Email &&
+                              b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+
+                _context.FirmaCalisanlari
+                    .Any(c => c.Email == model.Email && c.FirmaId == firma.Id);
+
+            // Firma'nın kendi e-posta adresi ile çakışmasın
+            bool firmaEmailExists = firma.Email == model.Email;
+
+            if (emailExists || firmaEmailExists)
             {
                 return Json(new { status = "email_exists" });
             }
 
+            // ➕ Bayi oluştur
             var bayiRol = _context.Roller.FirstOrDefault(r => r.Ad == "Bayi");
             if (bayiRol == null)
                 return BadRequest(new { status = "role_not_found" });
@@ -97,16 +116,17 @@ namespace FirmaDashboardDemo.Controllers
             _context.Bayiler.Add(model);
             _context.SaveChanges();
 
-            // BayiFirma ilişkisi kaydediliyor
             _context.BayiFirmalari.Add(new BayiFirma
             {
                 BayiId = model.Id,
-                FirmaId = firmaId.Value
+                FirmaId = firma.Id
             });
             _context.SaveChanges();
 
             return Json(new { status = "success" });
         }
+
+
 
 
         [HttpPost("{firmaSeoUrl}/Admin/Bayi/SaveBayiler")]
@@ -211,9 +231,33 @@ namespace FirmaDashboardDemo.Controllers
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
 
+            var firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (firmaId == null)
+                return Unauthorized();
+
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == model.Id);
             if (bayi == null) return NotFound();
 
+            // 🔁 E-posta başka kullanıcıya ait mi? (Kendisi hariç)
+            bool emailExists =
+                _context.Bayiler
+                    .Any(b => b.Email == model.Email &&
+                              b.Id != model.Id &&
+                              b.BayiFirmalari.Any(bf => bf.FirmaId == firmaId)) ||
+
+                _context.FirmaCalisanlari
+                    .Any(c => c.Email == model.Email &&
+                              c.FirmaId == firmaId) ||
+
+                _context.Firmalar
+                    .Any(f => f.Id == firmaId && f.Email == model.Email);
+
+            if (emailExists)
+            {
+                return Json(new { status = "email_exists" });
+            }
+
+            // 🔄 Güncelleme işlemi
             bayi.Ad = model.Ad;
             bayi.Adres = model.Adres;
             bayi.Il = model.Il;
@@ -225,5 +269,6 @@ namespace FirmaDashboardDemo.Controllers
             _context.SaveChanges();
             return Ok(new { status = "success" });
         }
+
     }
 }

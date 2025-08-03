@@ -97,6 +97,7 @@
 <script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 <!-- Toastr CSS -->
 <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- Toastr JS (jQuery'den sonra gelmeli) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
@@ -159,7 +160,7 @@
 
             // 🔔 Toastr uyarısı
             toastr.error("🔕 Formül modu kapatıldı");
-            console.log("📤 Formül modu kapatıldı");
+           
         } else {
             // 🟡 Formül modu açıldı
             document.getElementById("btnFormulModu").classList.add("active");
@@ -167,7 +168,7 @@
             // 🔔 Toastr uyarısı
             toastr.success("✏️ Hedef hücreyi seçin");
 
-            console.log("✏️ Formül modu aktif. Hedef hücre bekleniyor...");
+           
         }
     }
 
@@ -378,7 +379,8 @@
 
     function markSingleCell(mode) {
         const coords = hot.getSelectedLast();
-        if (!coords || coords.length < 2) return alert("Hücre seçilmedi.");
+            if (!coords || coords.length < 2) return toastr.error("Hücre seçilmedi.");
+ 
         const row = coords[0];
         const col = coords[1];
         const cell = String.fromCharCode(65 + col) + (row + 1);
@@ -441,63 +443,85 @@
         document.getElementById("btnTemizle").classList.toggle("active", aktifMod === "Temizle");
     }
 
-    function kaydet() {
+       function kaydet() {
         const urunSelect = document.getElementById("urunSec");
         const urunId = parseInt(urunSelect.value);
         const urunAd = urunSelect.options[urunSelect.selectedIndex].text;
-        if (!urunId || isNaN(urunId)) return alert("Lütfen bir ürün seçin.");
+           if (!urunId || isNaN(urunId)) return toastr.success("Lütfen bir ürün seçin.");
+    
 
-        const formulluVeri = hot.getSourceData();
-        const hucreler = [];
+        // 🧠 SweetAlert ile kullanıcı onayı al
+        Swal.fire({
+            title: 'Emin misiniz?',
+            text: 'Bayinin görmesini ve giriş yapmasını istediğiniz hücrelerin yukarıda tanımlandığından emin misiniz?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Evet, Kaydet',
+            cancelButtonText: 'İptal',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#dc3545'
+        }).then((result) => {
+            if (!result.isConfirmed) return; // Kullanıcı iptal etti
 
-        formulluVeri.forEach((row, i) => {
-            row.forEach((val, j) => {
-                const hAd = String.fromCharCode(65 + j) + (i + 1);
-                const meta = metaDataMap[hAd] || {};
-                hucreler.push({
-                    HucreAdi: hAd,
-                    Formul: val,
-                    IsFormul: typeof val === 'string' && val.trim().startsWith("="),
-                    GozuksunMu: meta.GozuksunMu === true,
-                    GirdimiYapabilir: meta.GirdimiYapabilir === true
+            const formulluVeri = hot.getSourceData();
+            const hucreler = [];
+
+            formulluVeri.forEach((row, i) => {
+                row.forEach((val, j) => {
+                    const hAd = String.fromCharCode(65 + j) + (i + 1);
+                    const meta = metaDataMap[hAd] || {};
+                    hucreler.push({
+                        HucreAdi: hAd,
+                        Formul: val,
+                        IsFormul: typeof val === 'string' && val.trim().startsWith("="),
+                        GozuksunMu: meta.GozuksunMu === true,
+                        GirdimiYapabilir: meta.GirdimiYapabilir === true
+                    });
                 });
             });
-        });
 
-        fetch(`/${seoUrl}/api/tablo/kaydet`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                UrunId: urunId,
-                TabloAdi: `${urunAd} TABLOSU`,
-                Aciklama: `${urunAd} üzerinden oluşturuldu.`,
-                Hucreler: hucreler
+            fetch(`/${seoUrl}/api/tablo/kaydet`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    UrunId: urunId,
+                    TabloAdi: `${urunAd} TABLOSU`,
+                    Aciklama: `${urunAd} üzerinden oluşturuldu.`,
+                    Hucreler: hucreler
+                })
             })
-        })
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === "ok") alert("✅ Tablo kaydedildi!");
-                else if (res.status === "already_exists") alert("⚠️ Zaten tablo var.");
-                else alert("❌ Hata oluştu.");
-            })
-            .catch(err => {
-                console.error(err);
-                alert("❌ Sunucu hatası!");
-            });
+                .then(res => res.json())
+                .then(res => {
+                    if (res.status === "ok") {
+                        Swal.fire("Kaydedildi", "Tablo başarıyla kaydedildi.", "success");
+                    } else if (res.status === "already_exists") {
+                        Swal.fire("Zaten Var", "Bu ürün için daha önce tablo tanımlanmış.", "warning");
+                    } else {
+                        Swal.fire("Hata", "Bilinmeyen bir hata oluştu.", "error");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire("Sunucu Hatası", "Tablo kaydedilemedi.", "error");
+                });
+        });
     }
+
 
        function urunSil() {
         const urunSelect = document.getElementById("urunSec");
         const urunId = urunSelect.value;
 
-        if (!urunId) return alert("Lütfen silmek için bir ürün seçin.");
+            if (!urunId) return toastr.success("Lütfen silmek için bir ürün seçin.");
+    
         if (!confirm("Bu ürünü silmek istediğinize emin misiniz?")) return;
 
         fetch(`/${seoUrl}/api/urun/sil/${urunId}`, { method: 'DELETE' })
             .then(res => res.json())
             .then(data => {
                 if (data.status === "ok") {
-                    alert("✅ Ürün silindi.");
+                    toastr.success("✅ Ürün silindi.");
+
                     // Seçilen ürünü dropdown'dan kaldır
                     const optionToRemove = urunSelect.querySelector(`option[value="${urunId}"]`);
                     if (optionToRemove) optionToRemove.remove();
@@ -514,7 +538,9 @@
                         initHandsontable();
                     }
                 } else {
-                    alert("❌ Ürün silinemedi.");
+                    toastr.error("❌ Ürün silinemedi.");
+
+                        
                 }
             });
     }
@@ -523,7 +549,8 @@
     function urunEkle() {
         const ad = document.getElementById("yeniUrunAdi").value.trim();
         const aciklama = document.getElementById("yeniUrunAciklama").value;
-        if (!ad) return alert("Ürün adı boş olamaz.");
+            if (!ad) return toastr.success("Ürün adı boş olamaz.");
+  
 
         fetch(`/${seoUrl}/api/urun/ekle`, {
             method: "POST",
@@ -535,13 +562,15 @@
         if (data.id) {
             const opt = new Option(data.ad, data.id);
             document.getElementById("urunSec").appendChild(opt);
-            alert("✅ Ürün eklendi: " + data.ad);
+            toastr.success("✅ Ürün eklendi: " + urunAdi);
+
             document.getElementById("yeniUrunAdi").value = "";
             document.getElementById("yeniUrunAciklama").value = "";
             $('#urunEkleModal').modal('hide');
             butonlariAktifEt(); // ✅ Ürün eklendikten sonra butonları aktif et
         } else {
-            alert("❌ Ürün eklenemedi. Aynı isimde olabilir.");
+            toastr.error("❌ Ürün eklenemedi. Aynı isimde olabilir.");
+
         }
     });
     }
@@ -574,7 +603,9 @@
         const hotData = hot.getData();
         const flat = hotData.flat().map(x => String(x).trim());
         if (flat.includes(degiskenAdi)) {
-            alert("Bu değişken zaten tabloda var.");
+          
+            toastr.success("Bu değişken zaten tabloda var.");
+
             checkbox.checked = false;
             return;
         }

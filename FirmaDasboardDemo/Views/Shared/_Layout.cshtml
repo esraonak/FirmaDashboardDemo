@@ -13,6 +13,7 @@
     <title>@ViewData["Title"] - FirmaDashboard</title>
 
     <!-- Google Fonts -->
+  
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet" />
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />
@@ -172,10 +173,17 @@
     </div>
 
     <!-- JS -->
+    <!-- 1. jQuery (Toastr'dan önce gelmeli) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+    <!-- Toastr CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Toastr JS (jQuery'den sonra gelmeli) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>

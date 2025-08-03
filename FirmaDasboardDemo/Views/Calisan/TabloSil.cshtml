@@ -5,12 +5,7 @@
 
 <h3>Mevcut Tablolar</h3>
 
-@if (TempData["SilmeMesaji"] != null)
-{
-    <div class="alert alert-success">@TempData["SilmeMesaji"]</div>
-}
-
-<table class="table table-bordered">
+<table class="table table-bordered" id="tabloSilTable">
     <thead>
         <tr>
             <th>Ürün</th>
@@ -21,17 +16,58 @@
     <tbody>
         @foreach (var t in ViewBag.Tablolar)
         {
-            <tr>
+            <tr data-id="@t.Id">
                 <td>@t.UrunAd</td>
                 <td>@t.Ad</td>
                 <td>
-                    <form method="post" action="/@ViewBag.SirketSeoUrl/Tablo/TabloSilOnayla/@t.Id"
-                          onsubmit="return confirm('Bu tabloyu silmek istediğinizden emin misiniz?');">
-
-                        <button type="submit" class="btn btn-danger btn-sm">Sil</button>
-                   
+                    <button type="button" class="btn btn-danger btn-sm btn-sil" data-id="@t.Id">
+                        Sil
+                    </button>
                 </td>
             </tr>
         }
     </tbody>
 </table>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <script>
+        const seo = '@ViewBag.SirketSeoUrl';
+
+        $(document).on("click", ".btn-sil", function () {
+            const tabloId = $(this).data("id");
+
+            Swal.fire({
+                title: 'Silmek istediğinize emin misiniz?',
+                text: "Bu işlem geri alınamaz.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Evet, sil',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/${seo}/Tablo/TabloSilOnayla/${tabloId}`, {
+                        method: 'POST'
+                    })
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.status === 'ok') {
+                            toastr.success("✅ Tablo başarıyla silindi!");
+                            $(`tr[data-id="${tabloId}"]`).remove();
+                        } else {
+                            toastr.error("❌ Silme başarısız!");
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        toastr.error("❌ Sunucu hatası!");
+                    });
+                }
+            });
+        });
+    </script>
+}

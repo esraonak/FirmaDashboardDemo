@@ -266,18 +266,36 @@ namespace FirmaDashboardDemo.Controllers
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null) return Unauthorized();
 
-            bool emailExists = _context.FirmaCalisanlari.Any(c => c.Email == model.Email)
-                || _context.Firmalar.Any(f => f.Email == model.Email)
-                || _context.Bayiler.Any(b => b.Email == model.Email);
+            // 🔒 Maksimum çalışan sayısı kontrolü
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
+            if (firma == null)
+                return BadRequest(new { status = "firma_not_found" });
+
+            int mevcutCalisanSayisi = _context.FirmaCalisanlari.Count(c => c.FirmaId == firma.Id);
+            if (mevcutCalisanSayisi >= firma.MaxCalisanSayisi)
+            {
+                return Json(new { status = "max_calisan_limit" });
+            }
+
+            // 📧 Aynı e-posta bu firmada var mı?
+            bool emailExists =
+                _context.FirmaCalisanlari.Any(c => c.Email == model.Email && c.FirmaId == firma.Id) ||
+                _context.Bayiler.Any(b =>
+                    b.Email == model.Email &&
+                    b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+                firma.Email == model.Email;
 
             if (emailExists)
+            {
                 return Json(new { status = "email_exists" });
+            }
 
+            // 👤 Rol atanıyor
             var calisanRol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
             if (calisanRol == null)
                 return BadRequest(new { status = "role_not_found" });
 
-            model.FirmaId = firmaId.Value;
+            model.FirmaId = firma.Id;
             model.Sifre = "1234";
             model.AktifMi = true;
             model.RolId = calisanRol.Id;
@@ -285,8 +303,10 @@ namespace FirmaDashboardDemo.Controllers
             _context.FirmaCalisanlari.Add(model);
             _context.SaveChanges();
 
-            return Redirect("/" + firmaSeo + "/Admin/Calisan/Calisanlar");
+            return Json(new { status = "success" });
         }
+
+
 
 
         [HttpPost("Calisan/UpdateCalisan")]
@@ -296,6 +316,22 @@ namespace FirmaDashboardDemo.Controllers
             if (calisan == null)
                 return NotFound();
 
+            var firmaId = calisan.FirmaId;
+
+            // 📧 E-posta kontrolü (aynı firmada ve farklı kullanıcıya aitse)
+            bool emailExists = _context.FirmaCalisanlari
+                .Any(c => c.Id != model.Id && c.Email == model.Email && c.FirmaId == firmaId)
+                || _context.Bayiler
+                .Any(b => b.Email == model.Email && b.BayiFirmalari.Any(bf => bf.FirmaId == firmaId))
+                || _context.Firmalar
+                .Any(f => f.Id == firmaId && f.Email == model.Email);
+
+            if (emailExists)
+            {
+                return Json(new { status = "email_exists" });
+            }
+
+            // 📝 Güncelleme işlemi
             calisan.AdSoyad = model.AdSoyad;
             calisan.Email = model.Email;
             calisan.Telefon = model.Telefon;
@@ -305,6 +341,7 @@ namespace FirmaDashboardDemo.Controllers
 
             return Json(new { status = "success" });
         }
+
 
         // ✅ Silme
         [HttpPost("Calisan/DeleteCalisan")]

@@ -41,6 +41,10 @@ namespace FirmaDashboardDemo.Controllers
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
             HttpContext.Session.SetString("FirmaLogo", firma.LogoUrl ?? ""); // 🔁 logo destekli
             HttpContext.Session.SetString("UserRole", "Bayi");
+            HttpContext.Session.SetString("Instagram", firma.InstagramUrl ?? "");
+            HttpContext.Session.SetString("Twitter", firma.TwitterUrl ?? "");
+            HttpContext.Session.SetString("Facebook", firma.FacebookUrl ?? "");
+            HttpContext.Session.SetString("WebSitesi", firma.WebSitesi ?? "");
 
             ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} BAYİ PANELİ";
 
@@ -83,7 +87,11 @@ namespace FirmaDashboardDemo.Controllers
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
             HttpContext.Session.SetString("FirmaAd", firma.Ad);
             HttpContext.Session.SetString("FirmaLogo", firma.LogoUrl ?? "");
-
+            // ✅ Sosyal medya bilgilerini Session'a yaz
+            HttpContext.Session.SetString("Instagram", firma.InstagramUrl ?? "");
+            HttpContext.Session.SetString("Twitter", firma.TwitterUrl ?? "");
+            HttpContext.Session.SetString("Facebook", firma.FacebookUrl ?? "");
+            HttpContext.Session.SetString("WebSitesi", firma.WebSitesi ?? "");
             // ✅ KVKK & ETK kontrol
             if (!bayi.KvkkOnaylandiMi || !bayi.EtkOnaylandiMi)
             {

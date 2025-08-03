@@ -63,8 +63,8 @@ namespace FirmaDasboardDemo.Services
                     }
                 }
 
-                // 24 saat sonra tekrar kontrol
-                await Task.Delay(TimeSpan.FromHours(24), stoppingToken);
+                // 6saat sonra tekrar kontrol
+                await Task.Delay(TimeSpan.FromHours(6), stoppingToken);
             }
         }
     }

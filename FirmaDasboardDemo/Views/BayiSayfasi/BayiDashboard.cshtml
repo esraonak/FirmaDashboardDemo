@@ -2,16 +2,52 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
     ViewData["Title"] = "Bayi Paneli";
 }
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
 <section class="content-header">
     <div class="container-fluid">
         <input type="hidden" id="firmaId" value="@Context.Session.GetInt32("FirmaId")" />
-        <h1>Bayi Paneli</h1>
+        
     </div>
 </section>
 
 <section class="content">
     <div class="container-fluid">
+        <!-- 🌐 Firma Sosyal Medya Hesapları -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="card-title">Firmaya Ait Sosyal Medya Hesapları</h3>
+            </div>
+            <div class="card-body text-center">
+                <div class="d-flex flex-wrap justify-content-center">
+                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Instagram")))
+                    {
+                        <a href="@Context.Session.GetString("Instagram")" target="_blank" class="btn btn-outline-danger m-2 px-4">
+                            <i class="fab fa-instagram"></i> Instagram
+                        </a>
+                    }
+                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Twitter")))
+                    {
+                        <a href="@Context.Session.GetString("Twitter")" target="_blank" class="btn btn-outline-info m-2 px-4">
+                            <i class="fab fa-twitter"></i> Twitter
+                        </a>
+                    }
+                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Facebook")))
+                    {
+                        <a href="@Context.Session.GetString("Facebook")" target="_blank" class="btn btn-outline-primary m-2 px-4">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </a>
+                    }
+                    @if (!string.IsNullOrEmpty(Context.Session.GetString("WebSitesi")))
+                    {
+                        <a href="@Context.Session.GetString("WebSitesi")" target="_blank" class="btn btn-outline-success m-2 px-4">
+                            <i class="fas fa-globe"></i> Web Sitesi
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+
 
         <!-- Firma ve Ürün Seçimi -->
         <div class="card">

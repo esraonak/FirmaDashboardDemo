@@ -221,27 +221,24 @@ namespace FirmaDasboardDemo.Controllers
             return View("~/Views/Calisan/TabloSil.cshtml");
         }
 
-      [HttpPost]
-public IActionResult TabloSilOnayla(int id)
-{
-    var tablo = _context.FormulTablosu
-        .Include(t => t.Hucreler)
-        .FirstOrDefault(t => t.Id == id);
+        [HttpPost]
+        [Route("{firmaSeoUrl}/Tablo/TabloSilOnayla/{id}")]
+        public IActionResult TabloSilOnayla(string firmaSeoUrl, int id)
+        {
+            var tablo = _context.FormulTablosu
+                .Include(t => t.Hucreler)
+                .FirstOrDefault(t => t.Id == id);
 
-    if (tablo == null)
-        return NotFound();
+            if (tablo == null)
+                return Json(new { status = "error", message = "Tablo bulunamadı." });
 
-    _context.Hucre.RemoveRange(tablo.Hucreler);
-    _context.FormulTablosu.Remove(tablo);
-    _context.SaveChanges();
+            _context.Hucre.RemoveRange(tablo.Hucreler);
+            _context.FormulTablosu.Remove(tablo);
+            _context.SaveChanges();
 
-    TempData["SilmeMesaji"] = "✅ Tablo başarıyla silindi.";
+            return Json(new { status = "ok", message = "Tablo başarıyla silindi." });
+        }
 
-    // firmaSeoUrl route'tan alınıyor
-    string seoUrl = RouteData.Values["firmaSeoUrl"]?.ToString();
-
-    return RedirectToAction("TabloSil", new { seoUrl });
-}
 
 
         [HttpDelete("{seoUrl}/api/urun/sil/{id}")]

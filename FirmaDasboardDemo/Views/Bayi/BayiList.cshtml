@@ -8,7 +8,8 @@
 @if (string.IsNullOrEmpty(seo))
 {
     <script>
-        alert("Firma bağlantısı geçersiz. Giriş sayfasına yönlendiriliyorsunuz.");
+        toastr.error("Firma bağlantısı geçersiz. Giriş sayfasına yönlendiriliyorsunuz.");
+      
         window.location.href = "/Admin/Login";
     </script>
 }
@@ -156,38 +157,56 @@
 
             });
                     // ➕ Yeni bayi ekle
-        $('#addForm').submit(function (e) {
+               $('#addForm').submit(function (e) {
             e.preventDefault();
 
             $.post(`/${seo}/Admin/Bayi/AddBayi`, $(this).serialize(), function (res) {
                 if (res.status === "success") {
                     $('#addModal').modal('hide');
                     table.ajax.reload();
-                    alert("Bayi başarıyla eklendi.");
+                    toastr.success("✅ Bayi başarıyla eklendi.");
                 } else if (res.status === "email_exists") {
-                    alert("Bu e-posta zaten kayıtlı.");
+                    toastr.error("❌ Bu e-posta zaten kayıtlı.");
+                } else if (res.status === "max_bayi_limit") {
+                    toastr.error("⚠️ Maksimum bayi sayısına ulaşıldı. Yeni bayi ekleyemezsiniz.");
                 } else {
-                    alert("Bir hata oluştu: " + (res.message || res.status));
+                    toastr.error("❌ Bir hata oluştu: " + (res.message || res.status));
                 }
             }).fail(function () {
-                alert("Sunucuya ulaşılamadı. Lütfen tekrar deneyin.");
+                toastr.error("🚫 Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.");
             });
         });
 
 
 
-            // ❌ Bayi sil
-            $('#bayiTable').on('click', '.delete-btn', function () {
-                const id = $(this).data('id');
-                if (confirm("Bayiyi silmek istiyor musunuz?")) {
-                    $.post(`/${seo}/Admin/Bayi/DeleteBayi`, { id }, function (res) {
 
+
+                    // ✅ Bayi sil — SweetAlert2 ile
+        $('#bayiTable').on('click', '.delete-btn', function () {
+            const id = $(this).data('id');
+
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bayiyi silmek istediğinize emin misiniz?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, Sil',
+                cancelButtonText: 'Vazgeç'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post(`/${seo}/Admin/Bayi/DeleteBayi`, { id }, function (res) {
                         if (res.status === "deleted") {
-                            table.ajax.reload();
+                            Swal.fire("Silindi", "Bayi başarıyla silindi.", "success");
+                            $('#bayiTable').DataTable().ajax.reload();
+                        } else {
+                            Swal.fire("Hata", "Bayi silinemedi.", "error");
                         }
                     });
                 }
             });
+        });
 
             // 🔁 Bayi düzenleme modalını aç
             $('#bayiTable').on('click', '.edit-btn', function () {
@@ -208,37 +227,42 @@
             });
 
             // 🔄 Bayi güncelle
-            $('#editForm').submit(function (e) {
-                e.preventDefault();
-                        // ✅ Doğru kullanım
-        const form = $('#editForm');
+                   $('#editForm').submit(function (e) {
+            e.preventDefault();
 
-        const formData = {
-            Id: form.find('[name=Id]').val(),
-            Ad: form.find('[name=Ad]').val(),
-            Adres: form.find('[name=Adres]').val(),
-            Il: form.find('[name=Il]').val(),
-            Ilce: form.find('[name=Ilce]').val(),
-            Email: form.find('[name=Email]').val(),
-            Telefon: form.find('[name=Telefon]').val(),
-            AktifMi: form.find('[name=AktifMi]').is(':checked')
-        };
+            const form = $('#editForm');
 
+            const formData = {
+                Id: form.find('[name=Id]').val(),
+                Ad: form.find('[name=Ad]').val(),
+                Adres: form.find('[name=Adres]').val(),
+                Il: form.find('[name=Il]').val(),
+                Ilce: form.find('[name=Ilce]').val(),
+                Email: form.find('[name=Email]').val(),
+                Telefon: form.find('[name=Telefon]').val(),
+                AktifMi: form.find('[name=AktifMi]').is(':checked')
+            };
 
-                       $.ajax({
-             url: `/${seo}/Admin/Bayi/UpdateBayi`,
-            method: 'POST',
-            data: JSON.stringify(formData),
-            contentType: 'application/json',
-            success: function (res) {
-                if (res.status === "success") {
-                    $('#editModal').modal('hide');
-                    table.ajax.reload();
+            $.ajax({
+                url: `/${seo}/Admin/Bayi/UpdateBayi`,
+                method: 'POST',
+                data: JSON.stringify(formData),
+                contentType: 'application/json',
+                success: function (res) {
+                    if (res.status === "success") {
+                        $('#editModal').modal('hide');
+                        toastr.success("✅ Bayi bilgileri başarıyla güncellendi.");
+                        table.ajax.reload();
+                    } else {
+                        toastr.error("❌ Güncelleme başarısız. Lütfen tekrar deneyin.");
+                    }
+                },
+                error: function () {
+                    toastr.error("❌ Sunucu hatası oluştu.");
                 }
-            }
+            });
         });
 
-            });
         });
     </script>
 }

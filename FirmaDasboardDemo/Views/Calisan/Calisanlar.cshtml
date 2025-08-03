@@ -39,7 +39,8 @@
 <div class="modal fade" id="addModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <form method="post" action="/@ViewBag.SirketSeoUrl/Admin/AddCalisan">
+            <form id="addForm">
+
                 <div class="modal-header">
                     <h5 class="modal-title">Yeni Çalışan</h5>
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
@@ -127,20 +128,28 @@
                 ]
             });
 
-            // ➕ Ekle
-            $('#addForm').submit(function (e) {
-                e.preventDefault();
-                const formData = $(this).serialize();
-                $.post(`/${seo}/Admin/AddCalisan`, formData, function (res) {
-                    if (res.status === "email_exists") {
-                        toastr.error("Bu email zaten kullanılıyor.");
-                    } else if (res.status === "success") {
-                        $('#addModal').modal('hide');
-                        toastr.success("Çalışan başarıyla eklendi.");
-                        table.ajax.reload();
-                    }
-                });
+                 // ➕ Çalışan Ekle
+        $('#addForm').submit(function (e) {
+            e.preventDefault();
+            const formData = $(this).serialize();
+
+            $.post(`/${seo}/Admin/AddCalisan`, formData, function (res) {
+                if (res.status === "email_exists") {
+                    toastr.error("❌ Bu e-posta zaten kayıtlı. Lütfen farklı bir e-posta girin.");
+                } else if (res.status === "max_calisan_limit") {
+                    toastr.error("⚠️ Maksimum çalışan sayısına ulaşıldı. Yeni çalışan ekleyemezsiniz.");
+                } else if (res.status === "success") {
+                    $('#addModal').modal('hide');
+                    toastr.success("✅ Çalışan başarıyla eklendi.");
+                    table.ajax.reload();
+                } else {
+                    toastr.error("⚠️ Çalışan eklenirken beklenmeyen bir hata oluştu.");
+                }
+            }).fail(function () {
+                toastr.error("🚫 Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.");
             });
+        });
+
 
             // ✏️ Düzenle
             $('#calisanTable').on('click', '.edit-btn', function () {
@@ -158,7 +167,7 @@
 
             // 🔁 Güncelle
                    // 🔁 Güncelleme
-        $('#editForm').submit(function (e) {
+               $('#editForm').submit(function (e) {
             e.preventDefault();
 
             const form = $(this);
@@ -178,27 +187,49 @@
                 success: function (res) {
                     if (res.status === 'success') {
                         $('#editModal').modal('hide');
-                        toastr.success("Çalışan başarıyla güncellendi.");
+                        toastr.success("✅ Çalışan başarıyla güncellendi.");
                         table.ajax.reload();
+                    } else if (res.status === 'email_exists') {
+                        toastr.error("❌ Bu e-posta zaten başka bir kullanıcıda kayıtlı.");
+                    } else {
+                        toastr.error("⚠️ Güncelleme sırasında bir hata oluştu.");
                     }
+                },
+                error: function () {
+                    toastr.error("🚫 Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.");
                 }
             });
         });
 
 
             // ❌ Sil
-                  // ❌ Sil
+               // ❌ Sil (Swal ile)
         $('#calisanTable').on('click', '.delete-btn', function () {
             const id = $(this).data('id');
-            if (confirm("Çalışanı silmek istiyor musunuz?")) {
-                $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
-                    if (res.status === "deleted") {
-                        table.ajax.reload();
-                        toastr.success("Çalışan başarıyla silindi.");
-                    }
-                });
-            }
+
+            Swal.fire({
+                title: 'Çalışanı silmek istiyor musunuz?',
+                text: 'Bu işlem geri alınamaz.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Evet, sil',
+                cancelButtonText: 'İptal',
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
+                        if (res.status === "deleted") {
+                            table.ajax.reload();
+                            toastr.success("✅ Çalışan başarıyla silindi.");
+                        } else {
+                            toastr.error("❌ Silme işlemi başarısız oldu.");
+                        }
+                    });
+                }
+            });
         });
+
 
         });
     </script>

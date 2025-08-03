@@ -45,6 +45,9 @@ public class DegiskenController : Controller
     [HttpPost("Ekle")]
     public IActionResult Ekle(string firmaSeoUrl, string Ad, string? Aciklama, string Deger)
     {
+        int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+        if (calisanId == null)
+            return Unauthorized();
         var firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null) return Unauthorized();
 
@@ -78,6 +81,9 @@ public class DegiskenController : Controller
     [HttpPost("Sil/{id}")]
     public IActionResult Sil(string firmaSeoUrl, int id)
     {
+        int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+        if (calisanId == null)
+            return Unauthorized();
         var degisken = _context.FirmaDegiskenler.FirstOrDefault(d => d.Id == id);
         if (degisken == null)
             return NotFound();
@@ -91,6 +97,9 @@ public class DegiskenController : Controller
     [HttpGet("GetById/{id}")]
     public IActionResult GetById(int id)
     {
+        int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+        if (calisanId == null)
+            return Unauthorized();
         int? firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null) return Unauthorized();
 
@@ -109,6 +118,9 @@ public class DegiskenController : Controller
     [HttpPost("Guncelle")]
     public IActionResult Guncelle(string firmaSeoUrl, int Id, string Ad, string? Aciklama, string Deger)
     {
+        int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+        if (calisanId == null)
+            return Unauthorized();
         int? firmaId = HttpContext.Session.GetInt32("FirmaId");
         if (firmaId == null) return Unauthorized();
 

@@ -27,7 +27,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Redirect("/" + firmaSeoUrl + "/Admin/Login");
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Redirect("/" + firmaSeoUrl + "/Admin/Login");
@@ -43,7 +45,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -71,7 +75,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -134,7 +140,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null) return Unauthorized();
 
@@ -197,7 +205,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == id);
             if (bayi != null)
             {
@@ -218,7 +228,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             var bayi = _context.Bayiler.FirstOrDefault(x => x.Id == id);
             if (bayi == null) return NotFound();
 
@@ -230,7 +242,9 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
-
+            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+            if (calisanId == null)
+                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();

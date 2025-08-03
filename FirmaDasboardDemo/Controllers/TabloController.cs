@@ -18,6 +18,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost("{seoUrl}/api/urun/ekle")]
         public IActionResult UrunEkle(string seoUrl, [FromBody] UrunEkleDto dto)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return Unauthorized();
@@ -45,6 +47,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet("{seoUrl}/api/urun/liste")]
         public IActionResult UrunleriGetir(string seoUrl)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return Unauthorized();
@@ -62,6 +66,8 @@ namespace FirmaDasboardDemo.Controllers
         [Route("api/urun/tabloluurun")]
         public IActionResult TablosuOlanUrunleriGetir()
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
@@ -77,6 +83,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet("{seoUrl}/Admin/Tablo/TabloOlustur")]
         public IActionResult TabloOlustur(string seoUrl)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return NotFound();
@@ -97,6 +105,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost("{seoUrl}/api/tablo/kaydet")]
         public IActionResult Kaydet(string seoUrl, [FromBody] TabloKayitDto input)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             var calisanId = HttpContext.Session.GetInt32("UserId");
 
@@ -133,6 +143,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet("{seoUrl}/Admin/Tablo/TabloDuzenle")]
         public IActionResult TabloDuzenle(string seoUrl)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return NotFound();
@@ -148,6 +160,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet]
         public IActionResult VeriGetir(int urunId)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null) return Unauthorized();
 
@@ -173,6 +187,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost]
         public IActionResult Guncelle([FromBody] TabloKayitDto dto)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var tablo = _context.FormulTablosu
                 .Include(t => t.Hucreler)
                 .FirstOrDefault(t => t.Id == dto.TabloId);
@@ -199,6 +215,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet("{seoUrl}/Admin/Tablo/TabloSil")]
         public IActionResult TabloSil(string seoUrl)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return NotFound();
@@ -225,6 +243,8 @@ namespace FirmaDasboardDemo.Controllers
         [Route("{firmaSeoUrl}/Tablo/TabloSilOnayla/{id}")]
         public IActionResult TabloSilOnayla(string firmaSeoUrl, int id)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var tablo = _context.FormulTablosu
                 .Include(t => t.Hucreler)
                 .FirstOrDefault(t => t.Id == id);
@@ -244,6 +264,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpDelete("{seoUrl}/api/urun/sil/{id}")]
         public IActionResult UrunSil(string seoUrl, int id)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null)
                 return Unauthorized();
@@ -276,6 +298,8 @@ namespace FirmaDasboardDemo.Controllers
         [HttpGet("{seoUrl}/api/firma-degiskenleri")]
         public IActionResult FirmaDegiskenleriniGetir(string seoUrl)
         {
+            if (HttpContext.Session.GetInt32("CalisanId") == null)
+                return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == seoUrl);
             if (firma == null) return Unauthorized();
 

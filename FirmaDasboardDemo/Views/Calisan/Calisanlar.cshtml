@@ -1,6 +1,7 @@
 ﻿@{
     ViewData["Title"] = "Çalışanlar";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+
     var seoUrl = Context.Session.GetString("FirmaSeoUrl") ?? "TENTECI";
     ViewBag.SirketSeoUrl = seoUrl;
 }

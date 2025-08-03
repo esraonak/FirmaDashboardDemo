@@ -1,6 +1,7 @@
 ﻿using FirmaDasboardDemo.Data;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 public class BaseBayiController : Controller
 {
@@ -14,13 +15,16 @@ public class BaseBayiController : Controller
     public override void OnActionExecuting(ActionExecutingContext context)
     {
         var action = context.RouteData.Values["action"]?.ToString()?.ToLower();
+        var controller = context.RouteData.Values["controller"]?.ToString()?.ToLower();
 
-        if (action == "login" || action == "logout")
+        // 🟡 Login ve Logout sayfaları için doğrulama gerekmez
+        if (action == "login" || action == "logout" || action == "onayformu")
         {
             base.OnActionExecuting(context);
             return;
         }
 
+        // 🛑 Rol ve Firma kontrolü
         var userRole = context.HttpContext.Session.GetString("UserRole");
         var firmaId = context.HttpContext.Session.GetInt32("FirmaId");
 
@@ -31,7 +35,7 @@ public class BaseBayiController : Controller
             return;
         }
 
-        // Firma bilgilerini çek
+        // 🏢 Firma bilgilerini çek
         var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
         if (firma != null)
         {
@@ -39,6 +43,7 @@ public class BaseBayiController : Controller
             ViewBag.FirmaAd = firma.Ad;
             ViewBag.FirmaSeoUrl = firma.SeoUrl;
             ViewBag.UserRole = userRole;
+            ViewBag.PanelBaslik = $"{firma.SeoUrl.ToUpper()} BAYİ PANELİ";
         }
 
         base.OnActionExecuting(context);

@@ -61,24 +61,24 @@ namespace FirmaDashboardDemo.Controllers
                 return View();
             }
 
-            // 🔐 FirmaSeoUrl session’dan alınmalı (önceki GET çağrısından)
+            // 🔐 FirmaSeoUrl session’dan alınmalı
             var firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl");
             if (string.IsNullOrEmpty(firmaSeoUrl))
                 return Content("Firma bilgisi eksik.");
 
-            // 🔍 SeoUrl ile firmayı bul
+            // 🔍 Firma bulunuyor mu?
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == firmaSeoUrl && f.AktifMi);
             if (firma == null)
                 return Content("Firma bulunamadı.");
 
-            // 🔁 Bu bayi o firmayla eşleşiyor mu? (BayiFirma tablosundan kontrol)
+            // ✅ Firma ile bayi eşleşmesi var mı?
             var eslesmeVarMi = _context.BayiFirmalari
                 .Any(bf => bf.BayiId == bayi.Id && bf.FirmaId == firma.Id);
             if (!eslesmeVarMi)
                 return Content("Bu firmayla ilişkilendirilmiş bayi hesabı bulunamadı.");
 
             // ✅ Session kayıtları
-            HttpContext.Session.SetInt32("UserId", bayi.Id);
+            HttpContext.Session.SetInt32("UserId", bayi.Id); // <-- Bu satır EKSİKTİ
             HttpContext.Session.SetInt32("RolId", bayi.RolId);
             HttpContext.Session.SetString("UserAd", bayi.Ad);
             HttpContext.Session.SetString("UserRole", "Bayi");
@@ -87,19 +87,22 @@ namespace FirmaDashboardDemo.Controllers
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
             HttpContext.Session.SetString("FirmaAd", firma.Ad);
             HttpContext.Session.SetString("FirmaLogo", firma.LogoUrl ?? "");
-            // ✅ Sosyal medya bilgilerini Session'a yaz
+
             HttpContext.Session.SetString("Instagram", firma.InstagramUrl ?? "");
             HttpContext.Session.SetString("Twitter", firma.TwitterUrl ?? "");
             HttpContext.Session.SetString("Facebook", firma.FacebookUrl ?? "");
             HttpContext.Session.SetString("WebSitesi", firma.WebSitesi ?? "");
-            // ✅ KVKK & ETK kontrol
+
+            // ✅ KVKK ve ETK kontrol
             if (!bayi.KvkkOnaylandiMi || !bayi.EtkOnaylandiMi)
             {
                 return RedirectToAction("OnayFormu", "BayiSayfasi", new { firmaSeoUrl = firma.SeoUrl });
             }
 
+            // 🔁 Başarılıysa Dashboard'a yönlendir
             return Redirect("/" + firma.SeoUrl + "/Bayi/Dashboard");
         }
+
 
 
 

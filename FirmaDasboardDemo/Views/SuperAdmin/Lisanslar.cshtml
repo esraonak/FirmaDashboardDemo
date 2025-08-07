@@ -37,13 +37,11 @@
                         <label>Lisans Bitiş Tarihi</label>
                         <input type="date" class="form-control" name="lisansBitis" id="lisansBitis" required />
                     </div>
-                    <div class="form-group">
-                        <label>Aktif Mi?</label>
-                        <select class="form-control" name="aktifMi" id="aktifMi">
-                            <option value="true">Evet</option>
-                            <option value="false">Hayır</option>
-                        </select>
+                    <div class="form-group form-check">
+                        <input type="checkbox" class="form-check-input" id="aktifMi" name="aktifMi" />
+                        <label class="form-check-label" for="aktifMi">Aktif Mi?</label>
                     </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-primary">Güncelle</button>
@@ -86,26 +84,49 @@
             });
 
             // Modal açma
-            $('#lisansTablosu').on('click', '.editBtn', function () {
-                $('#firmaId').val($(this).data('id'));
-                $('#lisansBitis').val($(this).data('tarih').split('T')[0]);
-                $('#aktifMi').val($(this).data('aktif'));
-                $('#lisansModal').modal('show');
-            });
+                   $('#lisansTablosu').on('click', '.editBtn', function () {
+            $('#firmaId').val($(this).data('id'));
+            $('#lisansBitis').val($(this).data('tarih').split('T')[0]);
+            $('#aktifMi').prop('checked', $(this).data('aktif') === true || $(this).data('aktif') === "True");
+            $('#lisansModal').modal('show');
+        });
+
 
             // Güncelleme
-            $('#lisansForm').submit(function (e) {
-                e.preventDefault();
-                $.ajax({
-                    url: '/SuperAdmin/GuncelleLisans',
-                    method: 'POST',
-                    data: $(this).serialize(),
-                    success: function () {
-                        $('#lisansModal').modal('hide');
-                        table.ajax.reload();
-                    }
-                });
+                    $('#lisansForm').submit(function (e) {
+            e.preventDefault();
+
+            const bitisTarihi = new Date($('#lisansBitis').val());
+            const bugun = new Date();
+            bugun.setHours(0, 0, 0, 0); // sadece tarih karşılaştırması
+
+            const aktifMi = $('#aktifMi').is(':checked');
+
+            if (aktifMi && bitisTarihi < bugun) {
+                toastr.warning("Aktif yapılabilmesi için lisans bitiş tarihi bugünden ileri bir tarih olmalıdır.");
+                return;
+            }
+
+            // Gönder
+            $.ajax({
+                url: '/SuperAdmin/GuncelleLisans',
+                method: 'POST',
+                data: {
+                    id: $('#firmaId').val(),
+                    lisansBitis: $('#lisansBitis').val(),
+                    aktifMi: aktifMi
+                },
+                success: function () {
+                    $('#lisansModal').modal('hide');
+                    $('#lisansTablosu').DataTable().ajax.reload();
+                    toastr.success("Lisans güncellendi.");
+                },
+                error: function () {
+                    toastr.error("Bir hata oluştu.");
+                }
             });
+        });
+
         });
     </script>
 }

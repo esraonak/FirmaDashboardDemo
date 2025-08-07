@@ -4,7 +4,7 @@ using FirmaDasboardDemo.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using FirmaDasboardDemo.Controllers;
-
+using FirmaDasboardDemo.Helpers;
 namespace FirmaDashboardDemo.Controllers
 {
     public class BayiController : BaseAdminController
@@ -75,10 +75,12 @@ namespace FirmaDashboardDemo.Controllers
         {
             if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
                 return Unauthorized();
+
             int? calisanId = HttpContext.Session.GetInt32("CalisanId");
             if (calisanId == null)
                 return Redirect("/" + firmaSeoUrl + "/Admin/Login");
-            var firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
             if (firmaId == null)
                 return Unauthorized();
 
@@ -89,36 +91,52 @@ namespace FirmaDashboardDemo.Controllers
             // ✅ Lisans bayi limiti kontrolü
             int mevcutBayiSayisi = _context.BayiFirmalari.Count(bf => bf.FirmaId == firma.Id);
             if (mevcutBayiSayisi >= firma.MaxBayiSayisi)
-            {
                 return Json(new { status = "max_bayi_limit" });
-            }
 
-            // ✅ E-mail sadece bu firmaya ait bayiler ve çalışanlar arasında kontrol edilir
+            // ✅ E-posta çakışma kontrolü
             bool emailExists =
-                _context.Bayiler
-                    .Any(b => b.Email == model.Email &&
-                              b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+                _context.Bayiler.Any(b => b.Email == model.Email && b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+                _context.FirmaCalisanlari.Any(c => c.Email == model.Email && c.FirmaId == firma.Id) ||
+                firma.Email == model.Email;
 
-                _context.FirmaCalisanlari
-                    .Any(c => c.Email == model.Email && c.FirmaId == firma.Id);
-
-            // Firma'nın kendi e-posta adresi ile çakışmasın
-            bool firmaEmailExists = firma.Email == model.Email;
-
-            if (emailExists || firmaEmailExists)
-            {
+            if (emailExists)
                 return Json(new { status = "email_exists" });
-            }
 
-            // ➕ Bayi oluştur
+            // ➕ Bayi rolü
             var bayiRol = _context.Roller.FirstOrDefault(r => r.Ad == "Bayi");
             if (bayiRol == null)
                 return BadRequest(new { status = "role_not_found" });
 
-            model.Sifre = "1234"; // default şifre
+            // 🔐 Şifre üret
+            string plainPassword = SifreUretici.RastgeleSifreUret(); // Harf + rakam 8 karakter
+            string loginUrl = $"{Request.Scheme}://{Request.Host}/{firma.SeoUrl}/Bayi/Login";
+
+            // 📧 Mail gönder
+            bool mailGittiMi = MailHelper.MailGonder(
+                model.Email,
+                "TenteCRM Bayi Giriş Bilgileri",
+                $@"Merhaba {model.Ad},
+
+TenteCRM bayi paneline giriş bilgileriniz:
+
+🔗 Giriş Adresi: {loginUrl}
+📧 E-posta: {model.Email}
+🔐 Şifre: {plainPassword}
+
+Giriş yaptıktan sonra şifrenizi değiştirmeniz önerilir.
+İyi çalışmalar."
+            );
+
+            if (!mailGittiMi)
+                return BadRequest(new { status = "email_send_fail" });
+
+            // 🧂 Şifreyi hashleyip DB'ye kaydet
+            string hashedPassword = HashHelper.Hash(plainPassword);
+            model.Sifre = hashedPassword;
             model.AktifMi = true;
             model.RolId = bayiRol.Id;
 
+            // 💾 Veritabanına ekle
             _context.Bayiler.Add(model);
             _context.SaveChanges();
 

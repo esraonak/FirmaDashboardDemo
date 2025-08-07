@@ -48,17 +48,20 @@
             const sifre = $('#YeniSifre').val();
             const tekrar = $('#YeniSifreTekrar').val();
             if (sifre !== tekrar) {
-                alert("Yeni şifreler uyuşmuyor.");
+                toastr.error("Yeni şifreler uyuşmuyor.");
+               
                 return;
             }
 
             const formData = $(this).serialize();
             $.post('/SuperAdmin/GuncelleSifre', formData, function (res) {
                        if (res.status === 'success') {
-            alert(res.message);
+                           toastr.success(res.message);
+            
             window.location.href = '/SuperAdmin/Dashboard';
         } else {
-            alert(res.message); // hata durumunda yönlendirme yapılmaz
+            toastr.error(res.message);
+             // hata durumunda yönlendirme yapılmaz
         }
 
             });

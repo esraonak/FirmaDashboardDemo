@@ -11,6 +11,51 @@
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" />
+
+    <style>
+        /* Logo boyutu mobilde küçültüldü */
+        .firma-logo {
+            max-height: 100px;
+            border-radius: 50%;
+            border: 2px solid #ccc;
+            padding: 5px;
+        }
+
+        /* Responsive düzenlemeler */
+        @@media (max-width: 768px) {
+            .login-box
+
+        {
+            width: 90% !important;
+            margin: 2rem auto;
+        }
+
+        .login-logo {
+            font-size: 1.2rem;
+        }
+
+        .firma-logo {
+            max-height: 80px;
+        }
+
+        .btn-block {
+            width: 100%;
+        }
+
+        .login-card-body {
+            padding: 1.2rem;
+        }
+
+        .input-group .form-control {
+            font-size: 0.95rem;
+        }
+
+        .login-box-msg {
+            font-size: 0.95rem;
+        }
+
+        }
+    </style>
 </head>
 <body class="hold-transition login-page">
 
@@ -20,7 +65,7 @@
             @if (!string.IsNullOrEmpty(Context.Session.GetString("FirmaLogo")))
             {
                 <div class="mb-2 text-center">
-                    <img src="@Context.Session.GetString("FirmaLogo")" alt="Firma Logosu" style="max-height: 100px; border-radius: 50%; border: 2px solid #ccc; padding: 5px;" />
+                    <img src="@Context.Session.GetString("FirmaLogo")" alt="Firma Logosu" class="firma-logo" />
                 </div>
             }
 
@@ -31,9 +76,9 @@
             <div class="card-body login-card-body">
                 <p class="login-box-msg">Devam etmek için giriş yapınız</p>
 
-                @if (ViewBag.Error != null)
+                @if (TempData["LoginError"] != null)
                 {
-                    <div class="alert alert-danger text-center">@ViewBag.Error</div>
+                    <div class="alert alert-danger text-center">@TempData["LoginError"]</div>
                 }
 
                 <form asp-controller="BayiSayfasi" asp-action="Login" method="post">
@@ -47,11 +92,11 @@
                     </div>
 
                     <div class="input-group mb-3">
-                        <input type="password" name="Password" class="form-control" placeholder="Şifre" required />
+                        <input type="password" name="Password" id="passwordInput" class="form-control" placeholder="Şifre" required />
                         <div class="input-group-append">
-                            <div class="input-group-text">
-                                <span class="fas fa-lock"></span>
-                            </div>
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword()" id="togglePasswordIcon">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -61,6 +106,13 @@
                         </div>
                     </div>
                 </form>
+
+                <div class="mt-3 text-center">
+                    <a href="/@Context.Session.GetString("FirmaSeoUrl")/Kullanici/SifremiUnuttum" class="btn btn-link">
+                        <i class="fas fa-unlock-alt"></i> Şifremi Unuttum
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>
@@ -69,6 +121,7 @@
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+
     @section Scripts {
         <script>
             $(document).ready(function () {
@@ -82,3 +135,19 @@
 
 </body>
 </html>
+
+<script>
+    function togglePassword() {
+        const input = document.getElementById("passwordInput");
+        const icon = document.getElementById("togglePasswordIcon").querySelector("i");
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
+    }
+</script>

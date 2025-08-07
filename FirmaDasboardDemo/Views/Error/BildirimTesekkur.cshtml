@@ -1,0 +1,18 @@
+﻿@{
+    ViewData["Title"] = "Teşekkürler";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="text-center mt-5">
+    <h2>Teşekkür Ederiz 🙏</h2>
+    <p>Geri bildiriminiz başarıyla alınmıştır.</p>
+    <p>Birazdan giriş ekranına yönlendirileceksiniz...</p>
+
+    <a class="btn btn-primary mt-3" href="@ViewBag.YonlendirmeUrl">Hemen Git</a>
+
+    <script>
+        setTimeout(function () {
+            window.location.href = '@ViewBag.YonlendirmeUrl';
+        }, 4000);
+    </script>
+</div>

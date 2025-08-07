@@ -1,0 +1,107 @@
+﻿@model FirmaDasboardDemo.Models.BayiMesaj
+@{
+    Layout = "~/Views/Shared/_BayiLayout.cshtml";
+    var firmaSeo = ViewBag.FirmaSeoUrl as string;
+}
+
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">📨 Mesaj Detayı</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="mb-3">
+            <b>Gönderim Tarihi:</b> @Model.Tarih.ToString("dd.MM.yyyy HH:mm") <br />
+            <b>Ürün:</b> @(Model.Urun?.Ad ?? "-") <br />
+            <b>Mesaj Türü:</b> @Model.MesajTuru.ToString() <br />
+            <b>Durum:</b>
+            @if (Model.AktifMi)
+            {
+                <span class="badge badge-success"><i class="fas fa-unlock"></i> Açık</span>
+            }
+            else
+            {
+                <span class="badge badge-secondary"><i class="fas fa-lock"></i> Kapalı</span>
+            }
+        </div>
+
+        <hr />
+
+        <!-- Hesaplama Özeti -->
+        @if (Model.MesajTuru == FirmaDasboardDemo.Enums.BayiMesajTuru.HesaplamaSonucu)
+        {
+            <div class="alert alert-secondary">
+                <h6><i class="fas fa-calculator"></i> Hesaplama Özeti</h6>
+                <div>
+                    <b>Görünen Hücreler:</b><br />
+                    @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.GorunenHucrelerJson ?? "[]"))
+                    {
+                        <span class="badge badge-primary mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                    }
+                </div>
+                <hr />
+                <div>
+                    <b>Girilen Hücreler:</b><br />
+                    @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.GirilenHucrelerJson ?? "[]"))
+                    {
+                        <span class="badge badge-warning text-dark mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                    }
+                </div>
+                <hr />
+                <div>
+                    <b>Satış Fiyatları:</b><br />
+                    @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.SatisFiyatlariJson ?? "[]"))
+                    {
+                        <span class="badge badge-success mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                    }
+                </div>
+            </div>
+        }
+
+        <hr />
+
+        <!-- Mesajlaşma Geçmişi -->
+        <div class="mt-4">
+            <h6><i class="fas fa-comments"></i> Mesajlaşma Geçmişi</h6>
+            <div class="border p-3 rounded bg-light" style="max-height: 400px; overflow-y: auto;">
+                @foreach (var m in Model.Mesajlar.OrderBy(m => m.Tarih))
+                {
+                    <div class="mb-3">
+                        <div class="d-flex @((m.GonderenFirmaMi ? "justify-content-start" : "justify-content-end"))">
+                            <div class="p-2 rounded"
+                                 style="background-color: @(m.GonderenFirmaMi ? "#e9ecef" : "#d1ecf1"); max-width: 70%;">
+                                <div class="small text-muted">
+                                    @(m.GonderenFirmaMi ? Model.Firma?.Ad : "Siz")
+                                    - @m.Tarih.ToString("dd.MM.yyyy HH:mm")
+                                </div>
+                                <div>@m.Icerik</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <hr />
+        @if (Model.AktifMi)
+        {
+            <hr />
+            <h6><i class="fas fa-reply"></i> Mesaj Yaz</h6>
+            <form method="post" action="/@firmaSeo/Bayi/MesajaCevapEkle">
+                <input type="hidden" name="BayiMesajId" value="@Model.Id" />
+                <input type="hidden" name="firmaSeoUrl" value="@firmaSeo" />
+                <div class="form-group">
+                    <textarea name="Icerik" class="form-control" rows="3" placeholder="Mesajınızı yazın..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary mt-2">
+                    <i class="fas fa-paper-plane"></i> Gönder
+                </button>
+            </form>
+        }
+
+        <!-- Geri Dön -->
+        <a href="/@firmaSeo/Bayi/BayiMesajlar" class="btn btn-secondary mt-3">
+            <i class="fas fa-arrow-left"></i> Mesajlara Dön
+        </a>
+    </div>
+</div>

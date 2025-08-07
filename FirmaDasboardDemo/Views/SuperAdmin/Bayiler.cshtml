@@ -116,38 +116,67 @@
 
 
 
-                function bayiDuzenle(id) {
+                      function bayiDuzenle(id) {
             $.get('/SuperAdmin/BayiGetir', { id: id }, function (data) {
                 $('#duzenleId').val(data.id);
                 $('#duzenleAd').val(data.adSoyad);
                 $('#duzenleEmail').val(data.email);
                 $('#duzenleTelefon').val(data.telefon);
-                $('#duzenleLisans').val(data.lisansBitis.substring(0, 10)); // YYYY-MM-DD
+
+                // 🔍 Eğer tarih varsa input'a ata, yoksa boş bırak
+                if (data.lisansBitis) {
+                    $('#duzenleLisans').val(data.lisansBitis); // zaten yyyy-MM-dd formatında geliyor
+                } else {
+                    $('#duzenleLisans').val('');
+                }
+
                 $('#duzenleAktif').prop('checked', data.aktifMi);
                 $('#bayiDuzenleModal').modal('show');
             });
         }
 
-                function bayiGuncelle() {
+
+             function bayiGuncelle() {
             var id = $('#duzenleId').val();
+            var lisansStr = $('#duzenleLisans').val();
+
+            // 🚫 Lisans tarihi kontrolü
+            if (!lisansStr || lisansStr === "0001-01-01") {
+                toastr.error("Lisans bitiş tarihi geçerli değil. Lütfen geçerli bir tarih girin.");
+                return;
+            }
+
+            var lisansDate = new Date(lisansStr);
+            var bugun = new Date();
+            bugun.setHours(0, 0, 0, 0); // sadece tarih karşılaştırması
+
+            if (lisansDate < bugun) {
+                toastr.error("Lisans bitiş tarihi geçmişte olamaz.");
+                return;
+            }
+
             var model = {
                 id: id,
                 adSoyad: $('#duzenleAd').val(),
                 email: $('#duzenleEmail').val(),
                 telefon: $('#duzenleTelefon').val(),
-                lisansBitis: $('#duzenleLisans').val(),
-                 aktifMi: $('#duzenleAktif').is(':checked')
+                lisansBitis: lisansStr,
+                aktifMi: $('#duzenleAktif').is(':checked')
             };
 
             $.post('/SuperAdmin/BayiGuncelle', model, function (result) {
                 if (result.success) {
+                    toastr.success("Bayi başarıyla güncellendi.");
                     $('#bayiDuzenleModal').modal('hide');
                     $('#bayiTablosu').DataTable().ajax.reload();
                 } else {
-                    alert("Güncelleme başarısız.");
+                    toastr.error(result.message || "Güncelleme başarısız.");
                 }
+            }).fail(function () {
+                toastr.error("Sunucu hatası oluştu.");
             });
         }
+
 
     </script>
 }

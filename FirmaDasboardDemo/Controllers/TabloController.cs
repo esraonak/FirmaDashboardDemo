@@ -130,7 +130,8 @@ namespace FirmaDasboardDemo.Controllers
                     Formul = h.Formul ?? "",
                     IsFormul = h.IsFormul,
                     GozuksunMu = h.GirdimiYapabilir ? true : h.GozuksunMu,
-                    GirdimiYapabilir = h.GirdimiYapabilir
+                    GirdimiYapabilir = h.GirdimiYapabilir,
+                    SatisFiyatMi = h.SatisFiyatMi
                 }).ToList()
             };
 
@@ -178,7 +179,8 @@ namespace FirmaDasboardDemo.Controllers
                 h.Formul,
                 h.IsFormul,
                 h.GozuksunMu,
-                h.GirdimiYapabilir
+                h.GirdimiYapabilir,
+                h.SatisFiyatMi
             });
 
             return Json(new { tabloId = tablo.Id, hucreler });
@@ -204,7 +206,8 @@ namespace FirmaDasboardDemo.Controllers
                 Formul = h.Formul ?? "",
                 IsFormul = h.IsFormul,
                 GozuksunMu = h.GirdimiYapabilir ? true : h.GozuksunMu,
-                GirdimiYapabilir = h.GirdimiYapabilir
+                GirdimiYapabilir = h.GirdimiYapabilir,
+                SatisFiyatMi = h.SatisFiyatMi
             }).ToList();
 
             _context.SaveChanges();

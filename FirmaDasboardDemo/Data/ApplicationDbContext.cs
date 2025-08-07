@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using FirmaDasboardDemo.Models;
+using FirmaDasboardDemo.Enums;
 
 namespace FirmaDasboardDemo.Data
 {
@@ -21,13 +22,17 @@ namespace FirmaDasboardDemo.Data
         public DbSet<Hucre> Hucre { get; set; }
         public DbSet<SuperAdmin> SuperAdminler { get; set; }
         public DbSet<FirmaDegisken> FirmaDegiskenler { get; set; }
-        
+        public DbSet<HataKaydi> HataKayitlari { get; set; }
+        public DbSet<BayiMesaj> BayiMesajlar { get; set; }
+        public BayiMesajTuru MesajTuru { get; set; }
+        public DbSet<BayiHesaplamaKaydi> BayiHesaplamaKayitlari { get; set; }
+        public DbSet<MesajSatiri> MesajSatirlari { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Bayi-Firma çoktan çoğa ilişki
+            // 🔗 Bayi-Firma çoktan çoğa ilişki
             modelBuilder.Entity<BayiFirma>()
                 .HasKey(bf => new { bf.BayiId, bf.FirmaId });
 
@@ -40,20 +45,64 @@ namespace FirmaDasboardDemo.Data
                 .HasOne(bf => bf.Firma)
                 .WithMany(f => f.BayiFirmalari)
                 .HasForeignKey(bf => bf.FirmaId);
-            // 🔧 FORMULTABLOSU için ekle
+
+            // 🔧 FormülTablosu ilişkileri
             modelBuilder.Entity<FormulTablosu>()
                 .HasOne(ft => ft.Urun)
                 .WithMany(u => u.FormulTablolari)
                 .HasForeignKey(ft => ft.UrunId)
-                .OnDelete(DeleteBehavior.Restrict); // ❗ burası hatayı çözer
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<FormulTablosu>()
                 .HasOne(ft => ft.Calisan)
                 .WithMany()
                 .HasForeignKey(ft => ft.CalisanId)
-                .OnDelete(DeleteBehavior.Restrict); // ❗
+                .OnDelete(DeleteBehavior.Restrict);
 
-        
+            // 🔧 BayiMesaj ilişkileri
+            modelBuilder.Entity<BayiMesaj>()
+                .HasOne(m => m.Bayi)
+                .WithMany()
+                .HasForeignKey(m => m.BayiId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<BayiMesaj>()
+                .HasOne(m => m.Urun)
+                .WithMany()
+                .HasForeignKey(m => m.UrunId)
+                .IsRequired(false);
+
+            modelBuilder.Entity<BayiMesaj>()
+                .HasOne(m => m.Firma)
+                .WithMany()
+                .HasForeignKey(m => m.FirmaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // 🔧 MesajSatiri ilişkileri
+            modelBuilder.Entity<MesajSatiri>()
+                .HasOne(ms => ms.BayiMesaj)
+                .WithMany(bm => bm.Mesajlar)
+                .HasForeignKey(ms => ms.BayiMesajId)
+                .OnDelete(DeleteBehavior.Cascade); // BayiMesaj silinince tüm mesajlar silinsin
+
+            modelBuilder.Entity<MesajSatiri>()
+                .HasOne(ms => ms.Bayi)
+                .WithMany()
+                .HasForeignKey(ms => ms.BayiId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MesajSatiri>()
+                .HasOne(ms => ms.Firma)
+                .WithMany()
+                .HasForeignKey(ms => ms.FirmaId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MesajSatiri>()
+                .HasOne(ms => ms.Urun)
+                .WithMany()
+                .HasForeignKey(ms => ms.UrunId)
+                .OnDelete(DeleteBehavior.SetNull); // Ürün silinirse null bırak
         }
+
     }
 }

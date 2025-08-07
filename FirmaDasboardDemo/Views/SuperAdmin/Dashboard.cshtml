@@ -17,8 +17,8 @@
         <h3 class="card-title">Firma Listesi</h3>
         <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#firmaEkleModal">Yeni Firma Ekle</button>
     </div>
-    <div class="card-body">
-        <table id="firmaTablosu" class="display nowrap" style="width:100%">
+    <div class="card-body table-responsive">
+        <table id="firmaTablosu" class="display nowrap table table-bordered" style="width:100%">
             <thead>
                 <tr>
                     <th>Firma Adı</th>
@@ -217,22 +217,44 @@
                 orderable: false,
                 searchable: false
             }
-        ]
+            ],
+        scrollX: true,
+        responsive: true,
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.5/i18n/tr.json'
+        }
 
             });
 
-            // ✅ Firma Sil
-            $('#firmaTablosu').on('click', '.delete-btn', function () {
-                const id = $(this).data('id');
-                if (confirm("Firmayı silmek istiyor musunuz?")) {
-                    $.post('/SuperAdmin/DeleteFirma', { id }, function (res) {
-                        if (res.status === "deleted") {
-                            table.ajax.reload();
-                            alert("Firma silindi.");
-                        }
-                    });
+           // ✅ Firma Sil (SweetAlert + Toastr ile)
+$('#firmaTablosu').on('click', '.delete-btn', function () {
+    const id = $(this).data('id');
+
+    Swal.fire({
+        title: 'Emin misiniz?',
+        text: "Bu firmayı silmek üzeresiniz!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Evet, sil',
+        cancelButtonText: 'İptal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.post('/SuperAdmin/DeleteFirma', { id }, function (res) {
+                if (res.status === "deleted") {
+                    $('#firmaTablosu').DataTable().ajax.reload();
+                    toastr.success("Firma başarıyla silindi.");
+                } else {
+                    toastr.error("Silme işlemi başarısız oldu.");
                 }
+            }).fail(function () {
+                toastr.error("Sunucu hatası: Firma silinemedi.");
             });
+        }
+    });
+});
+
 
             // ✅ Firma Çalışan Ekle Modalı aç
             $('#firmaTablosu').on('click', '.ekle-btn', function () {
@@ -264,7 +286,8 @@
             }
         },
                     error: function () {
-                        alert("İşlem sırasında bir hata oluştu.");
+                                         toastr.error("İşlem sırasında bir hata oluştu.");
+                       
                     }
                 });
             });
@@ -296,50 +319,50 @@
                 });
             });
 
-            // ✅ Firma Güncelle Submit
-            $('#firmaDuzenleForm').submit(function (e) {
-                e.preventDefault();
+                   // ✅ Firma Güncelle Submit
+        $('#firmaDuzenleForm').submit(function (e) {
+            e.preventDefault();
 
-                const model = {
-                    Id: $('#duzenleFirmaId').val(),
-                    Ad: $('#duzenleAd').val(),
-                    Email: $('#duzenleEmail').val(),
-                    Telefon: $('#duzenleTelefon').val(),
-                    SeoUrl: $('#duzenleSeoUrl').val(),
-                    LisansBitisTarihi: $('#duzenleLisansBitisTarihi').val(),
-                    AktifMi: $('#duzenleAktifMi').is(':checked'),
+            const model = {
+                Id: parseInt($('#duzenleFirmaId').val()),
+                Ad: $('#duzenleAd').val(),
+                Email: $('#duzenleEmail').val(),
+                Telefon: $('#duzenleTelefon').val(),
+                SeoUrl: $('#duzenleSeoUrl').val(),
+                LisansBitisTarihi: $('#duzenleLisansBitisTarihi').val(),
+                AktifMi: $('#duzenleAktifMi').is(':checked'),
 
-                    Adres: $('#duzenleAdres').val(),
-                    Il: $('#duzenleIl').val(),
-                    Ilce: $('#duzenleIlce').val(),
-                    MaxCalisanSayisi: $('#duzenleMaxCalisanSayisi').val(),
-                    MaxBayiSayisi: $('#duzenleMaxBayiSayisi').val(),
-                    LogoUrl: $('#duzenleLogoUrl').val(),
-                    InstagramUrl: $('#duzenleInstagram').val(),
-                    FacebookUrl: $('#duzenleFacebook').val(),
-                    TwitterUrl: $('#duzenleTwitter').val(),
-                    WebSitesi: $('#duzenleWebSitesi').val()
-                };
+                Adres: $('#duzenleAdres').val(),
+                Il: $('#duzenleIl').val(),
+                Ilce: $('#duzenleIlce').val(),
+                MaxCalisanSayisi: parseInt($('#duzenleMaxCalisanSayisi').val()) || 0,
+                MaxBayiSayisi: parseInt($('#duzenleMaxBayiSayisi').val()) || 0,
+                LogoUrl: $('#duzenleLogoUrl').val(),
+                InstagramUrl: $('#duzenleInstagram').val(),
+                FacebookUrl: $('#duzenleFacebook').val(),
+                TwitterUrl: $('#duzenleTwitter').val(),
+                WebSitesi: $('#duzenleWebSitesi').val()
+            };
 
-                $.ajax({
-                    url: '/SuperAdmin/UpdateFirma',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(model),
-                    success: function (res) {
-                        if (res.status === "success") {
-                            alert("Firma güncellendi.");
-                            $('#firmaDuzenleModal').modal('hide');
-                            table.ajax.reload();
-                        } else {
-                            alert("Hata: " + (res.message || res.status));
-                        }
-                    },
-                    error: function () {
-                        alert("Sunucu hatası oluştu.");
+            $.ajax({
+                url: '/SuperAdmin/UpdateFirma',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(model),
+                success: function (res) {
+                    if (res.status === "success") {
+                        toastr.success("Firma başarıyla güncellendi.");
+                        $('#firmaDuzenleModal').modal('hide');
+                        $('#firmaTablosu').DataTable().ajax.reload();
+                    } else {
+                        toastr.error("Hata: " + (res.message || res.status));
                     }
-                });
+                },
+                error: function (xhr) {
+                    toastr.error("Sunucu hatası oluştu: " + xhr.statusText);
+                }
             });
+        });
 
         });
     </script>

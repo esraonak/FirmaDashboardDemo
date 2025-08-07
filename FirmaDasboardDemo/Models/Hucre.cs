@@ -17,6 +17,7 @@ public class Hucre
     // Yeni alanlar:
     public bool GozuksunMu { get; set; } // Bayi bu hücreyi görebilir mi?
     public bool GirdimiYapabilir { get; set; } // Bayi bu hücreye değer girebilir mi?
+    public bool SatisFiyatMi { get; set; }  // yeni alan
 
     // Bağlı olduğu tablo
     public int TabloId { get; set; }

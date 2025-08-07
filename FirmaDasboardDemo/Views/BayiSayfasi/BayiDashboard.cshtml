@@ -1,198 +1,234 @@
 ﻿@{
     Layout = "~/Views/Shared/_BayiLayout.cshtml";
-    ViewData["Title"] = "Bayi Paneli";
 }
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
 
-<section class="content-header">
-    <div class="container-fluid">
-        <input type="hidden" id="firmaId" value="@Context.Session.GetInt32("FirmaId")" />
-        
-    </div>
-</section>
+<style>
+    .hucre-satisfiyat {
+        background-color: #fff3cd !important;
+        font-weight: bold;
+        color: #856404;
+    }
+</style>
 
 <section class="content">
     <div class="container-fluid">
-        <!-- 🌐 Firma Sosyal Medya Hesapları -->
-        <div class="card mt-4">
-            <div class="card-header">
-                <h3 class="card-title">Firmaya Ait Sosyal Medya Hesapları</h3>
-            </div>
-            <div class="card-body text-center">
-                <div class="d-flex flex-wrap justify-content-center">
-                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Instagram")))
-                    {
-                        <a href="@Context.Session.GetString("Instagram")" target="_blank" class="btn btn-outline-danger m-2 px-4">
-                            <i class="fab fa-instagram"></i> Instagram
-                        </a>
-                    }
-                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Twitter")))
-                    {
-                        <a href="@Context.Session.GetString("Twitter")" target="_blank" class="btn btn-outline-info m-2 px-4">
-                            <i class="fab fa-twitter"></i> Twitter
-                        </a>
-                    }
-                    @if (!string.IsNullOrEmpty(Context.Session.GetString("Facebook")))
-                    {
-                        <a href="@Context.Session.GetString("Facebook")" target="_blank" class="btn btn-outline-primary m-2 px-4">
-                            <i class="fab fa-facebook"></i> Facebook
-                        </a>
-                    }
-                    @if (!string.IsNullOrEmpty(Context.Session.GetString("WebSitesi")))
-                    {
-                        <a href="@Context.Session.GetString("WebSitesi")" target="_blank" class="btn btn-outline-success m-2 px-4">
-                            <i class="fas fa-globe"></i> Web Sitesi
-                        </a>
-                    }
-                </div>
-            </div>
-        </div>
-
-
-        <!-- Firma ve Ürün Seçimi -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Ürün Seç</h3>
-            </div>
+        <!-- Ürün Seçim Kartı -->
+        <div class="card" id="urunSecimKarti">
+            <div class="card-header"><h3 class="card-title">Ürün Seç</h3></div>
             <div class="card-body">
-               
-
                 <div class="form-group mt-3">
                     <label for="urunSec">Ürün Seç:</label>
                     <select id="urunSec" class="form-control"></select>
                 </div>
-
-                <button class="btn btn-primary mt-2" onclick="tabloyuGetir()">ÖLCÜ GİR</button>
+                <button class="btn btn-primary mt-2" onclick="tabloyuGetir()">ÖLÇÜ GİR</button>
             </div>
         </div>
 
-        <!-- Tablo Görüntüleme -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <strong>Ürün Hesaplama Tablosu</strong>
-            </div>
-            <div class="card-body">
-                <div id="hot" style="width: 100%; overflow-x: auto;"></div>
-            </div>
-        </div>
+        <!-- Ana Form -->
+        <form method="post" action="/@Context.Session.GetString("FirmaSeoUrl")/BayiHesaplamaKaydet">
+            <input type="hidden" id="aktifUrunIdHidden" name="UrunId" />
+            <input type="hidden" id="GirilenHucreler" name="GirilenHucreler" />
+            <input type="hidden" id="GorunenHucreler" name="GorunenHucreler" />
+            <input type="hidden" id="SatisFiyatlari" name="SatisFiyatlari" />
 
+            <!-- Tablo -->
+            <div class="card mt-3">
+                <div class="card-header"><strong>Ürün Hesaplama Tablosu</strong></div>
+                <div class="card-body">
+                    <div id="hot" style="width: 100%; overflow-x: auto;"></div>
+                </div>
+            </div>
+
+            <!-- Fiyat Sonuçları -->
+            <div id="fiyatSonuclari" class="mt-3 card d-none">
+                <div class="card-header"><strong>💰 Hesaplanan Satış Fiyatları</strong></div>
+                <div class="card-body" id="fiyatSonucListesi"></div>
+            </div>
+
+            <!-- Tek Buton: Fiyatı Göster + Kaydet -->
+            <button type="button" class="btn btn-success mt-3" onclick="fiyatGosterVeKaydet()">💰 Fiyat Al</button>
+
+
+		</form>
+        <button type="button" id="iletisimGecBtn" class="btn btn-info mt-2 d-none" onclick="firmaIletisimSayfasinaYonlendir()">
+			📩 Firma ile İletişime Geç
+		</button>
     </div>
 </section>
 
-<!-- Handsontable -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.css" />
-<script src="https://cdn.jsdelivr.net/npm/handsontable@13.0.0/dist/handsontable.full.min.js"></script>
-
 <script>
     const firmaSeoUrl = "@(Context.Session.GetString("FirmaSeoUrl") ?? "")";
-    let hot;
-    let aktifUrunId = null;
-    let hucreMetalar = [];
+    let hot, aktifUrunId = null;
+    let hucreMetalar = [], fiyatlarGosterilsinMi = false;
+    let girilenHucreler = [], gorunenHucreler = [], satisFiyatlari = [];
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", () => {
         hot = new Handsontable(document.getElementById('hot'), {
             data: [],
             rowHeaders: true,
             colHeaders: true,
             height: 'auto',
             licenseKey: 'non-commercial-and-evaluation',
-            formulas: {
-                engine: HyperFormula
-            },
-            afterChange: function (changes, source) {
-                if (source === 'loadData' || !changes) return;
-                // ✅ Arka planda formüller kendiliğinden hesaplanacak
-            }
+            formulas: { engine: HyperFormula },
         });
 
-          urunleriYukle();
+        urunleriYukle();
     });
 
     function urunleriYukle() {
-    const firmaId = document.getElementById("firmaId").value;
-    if (!firmaId) return;
-
-            fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetUrunler`)
-        .then(res => res.ok ? res.json() : [])
-        .then(urunler => {
-            const urunSelect = document.getElementById("urunSec");
-            urunSelect.innerHTML = "<option disabled selected>Ürün seçiniz</option>";
-            urunler.forEach(u => {
-                const opt = document.createElement("option");
-                opt.value = u.id;
-                opt.textContent = u.ad;
-                urunSelect.appendChild(opt);
+        fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetUrunler`)
+            .then(res => res.ok ? res.json() : [])
+            .then(urunler => {
+                const urunSelect = document.getElementById("urunSec");
+                urunSelect.innerHTML = "<option disabled selected>Ürün seçiniz</option>";
+                urunler.forEach(u => {
+                    const opt = document.createElement("option");
+                    opt.value = u.id;
+                    opt.textContent = u.ad;
+                    urunSelect.appendChild(opt);
+                });
             });
-        })
-        .catch(() => alert("Ürünler yüklenirken hata oluştu."));
-}
+    }
 
     function tabloyuGetir() {
+        document.getElementById("urunSecimKarti").style.display = "none";
         const urunId = document.getElementById("urunSec").value;
         if (!urunId) return alert("Lütfen bir ürün seçiniz.");
         aktifUrunId = urunId;
+        document.getElementById("aktifUrunIdHidden").value = urunId;
 
-                fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetTablo?urunId=${urunId}`)
+        fetch(`/${firmaSeoUrl}/Bayi/BayiSayfasi/GetTablo?urunId=${urunId}`)
             .then(res => res.ok ? res.json() : null)
             .then(data => {
                 if (!data) return alert("Tablo verisi alınamadı.");
-
                 hucreMetalar = data.hucreler;
-
                 const rowCount = data.grid.length;
                 const colCount = data.grid[0]?.length || 1;
-
                 hot.loadData(data.grid);
 
                 hot.updateSettings({
                     maxRows: rowCount,
                     maxCols: colCount,
-                    cells: function (row, col) {
+                    cells: (row, col) => {
                         const cellId = String.fromCharCode(65 + col) + (row + 1);
                         const meta = hucreMetalar.find(h => h.hucreAdi === cellId);
-
-                          if (!meta || !meta.gozuksunMu) {
-        return {
-            readOnly: true,
-            className: 'htDimmed',
-            renderer: function (instance, td, row, col, prop, value, cellProperties) {
-                td.innerText = "";
-                return td;
-            }
-        };
-    }
-
-                        // 🔒 Formül hücreleri: görünür olsa bile yazılamaz
-                        if (meta.formulMu) {
-                            return {
-                                readOnly: true,
-                                className: 'htDimmed'
-                            };
-                        }
-
-                        // 🚫 Görünmesin istenen hücre: veriyi hesaplar ama görünmez
-                        if (!meta.gozuksunMu) {
-                            return {
-                                readOnly: true,
-                                className: 'htDimmed',
-                                renderer: function (instance, td) {
-                                    Handsontable.renderers.TextRenderer.apply(this, arguments);
-                                    td.innerText = ""; // ✅ tamamen boş göster
-                                }
-                            };
-                        }
-
-                        // 🖊️ Sadece görünür ve giriş izni olanlar yazılabilir
-                        const yazilabilir = meta.girdimiYapabilir && meta.gozuksunMu;
-                        return {
-                            readOnly: !yazilabilir
-                        };
+                        if (!meta) return { readOnly: true, className: 'htDimmed' };
+                        if (meta.satisFiyatMi && !fiyatlarGosterilsinMi)
+                            return { readOnly: true, className: 'htDimmed', renderer: (i, td) => { td.innerText = ""; return td; } };
+                        if (meta.satisFiyatMi && fiyatlarGosterilsinMi)
+                            return { readOnly: true, className: 'hucre-satisfiyat' };
+                        if (!meta.gozuksunMu)
+                            return { readOnly: true, className: 'htDimmed', renderer: (i, td) => { td.innerText = ""; return td; } };
+                        if (meta.formulMu)
+                            return { readOnly: true, className: 'htDimmed' };
+                        return { readOnly: !(meta.girdimiYapabilir && meta.gozuksunMu) };
                     }
                 });
 
-                hot.render(); // tabloyu tekrar çiz
-            })
-            .catch(() => alert("Tablo yüklenirken hata oluştu."));
+                hot.render();
+            });
+    }
+    function fiyatGosterVeKaydet() {
+        fiyatlarGosterilsinMi = true;
+        aktifUrunId = aktifUrunId || document.getElementById("aktifUrunIdHidden").value;
+        if (!aktifUrunId) return alert("Ürün ID alınamadı.");
+
+        const fiyatHucreleri = hucreMetalar.filter(h => h.satisFiyatMi);
+        const sonucListesi = document.getElementById("fiyatSonucListesi");
+        sonucListesi.innerHTML = "";
+
+        let toplam = 0;
+        satisFiyatlari = [];
+
+        fiyatHucreleri.forEach(h => {
+            const col = h.hucreAdi.charCodeAt(0) - 65;
+            const row = parseInt(h.hucreAdi.substring(1)) - 1;
+            const deger = hot.getDataAtCell(row, col);
+            const sayi = parseFloat(deger);
+            if (!isNaN(sayi)) toplam += sayi;
+            satisFiyatlari.push({ hucreAdi: h.hucreAdi, deger: deger });
+            sonucListesi.innerHTML += `<p><strong>${h.hucreAdi}</strong>: ${deger ?? "(boş)"}</p>`;
+        });
+
+        sonucListesi.innerHTML += `<p class="mt-3 text-success font-weight-bold"><strong>Toplam:</strong> ${toplam}</p>`;
+        document.getElementById("fiyatSonuclari").classList.remove("d-none");
+        hot.render();
+
+        girilenHucreler = [];
+        gorunenHucreler = [];
+
+        function columnIndexFromLetter(letter) {
+            let col = 0;
+            for (let i = 0; i < letter.length; i++) {
+                col *= 26;
+                col += letter.charCodeAt(i) - 64;
+            }
+            return col - 1;
+        }
+
+        hucreMetalar.forEach(meta => {
+            const match = meta.hucreAdi.match(/^([A-Z]+)(\d+)$/);
+            if (!match) return;
+
+            const col = columnIndexFromLetter(match[1]);
+            const row = parseInt(match[2]) - 1;
+            const deger = hot.getDataAtCell(row, col);
+
+            if (meta.gozuksunMu)
+                gorunenHucreler.push({ hucreAdi: meta.hucreAdi, deger: deger });
+            if (meta.gozuksunMu && meta.girdimiYapabilir)
+                girilenHucreler.push({ hucreAdi: meta.hucreAdi, deger: deger });
+        });
+
+        // Hidden inputlara yaz
+        guncelleHiddenInputlar();
+
+        // Formu post et
+        const form = document.querySelector("form");
+        const formData = new FormData(form);
+
+        fetch(`/${firmaSeoUrl}/BayiHesaplamaKaydet`, {
+            method: "POST",
+            body: formData
+        })
+        .then(res => {
+            if (res.ok) {
+                toastr.success("✅ Fiyatınız oluşturuldu.");
+
+                // 👉 Firma iletişim butonunu göster
+                document.getElementById("iletisimGecBtn").classList.remove("d-none");
+
+                // 🧠 Son hesaplamayı localStorage’a koy
+                const urunSelect = document.getElementById("urunSec");
+                const seciliUrunText = urunSelect.options[urunSelect.selectedIndex].text;
+
+                localStorage.setItem("bayiSonMesaj", JSON.stringify({
+                    urunId: parseInt(urunSelect.value), // ✅ eklendi!
+                    urunAdi: seciliUrunText,
+                    girilenHucreler,
+                    gorunenHucreler,
+                    satisFiyatlari
+                }));
+            } else {
+                toastr.error("❌ Kaydetme başarısız.");
+            }
+        })
+        .catch(() => {
+            toastr.error("❌ Sunucu hatası.");
+        });
+    }
+    function firmaIletisimSayfasinaYonlendir() {
+        window.location.href = `/${firmaSeoUrl}/Bayi/BayiMesaj`;
+    }
+
+
+
+    function guncelleHiddenInputlar() {
+        document.getElementById("GirilenHucreler").value = JSON.stringify(girilenHucreler);
+        document.getElementById("GorunenHucreler").value = JSON.stringify(gorunenHucreler);
+        document.getElementById("SatisFiyatlari").value = JSON.stringify(satisFiyatlari);
     }
 </script>
-

@@ -1,0 +1,114 @@
+﻿@model FirmaDasboardDemo.Dtos.BayiMesajGonderDto
+@{
+    Layout = "~/Views/Shared/_BayiLayout.cshtml";
+}
+
+<div class="card">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Firma ile İletişim</h5>
+    </div>
+
+    <div class="card-body">
+        @if (TempData["Success"] != null)
+        {
+            <script>
+                $(function () {
+                    toastr.success('@TempData["Success"]');
+                });
+            </script>
+        }
+
+        <!-- Hesaplama Özeti -->
+        <div id="hesaplamaOzeti" class="alert alert-secondary d-none">
+            <h6><i class="fas fa-info-circle"></i> Hesaplama Özeti:</h6>
+            <div id="ozetUrun"></div>
+            <div id="ozetGorunen"></div>
+            <hr />
+            <div id="ozetGirilen"></div>
+            <hr />
+            <div id="ozetSatis"></div>
+        </div>
+
+        <!-- Mesaj Formu -->
+        <form method="post" action="/@ViewBag.FirmaSeoUrl/Bayi/BayiMesajGonder">
+            <div class="form-group">
+                <label for="mesaj">Mesajınız</label>
+                <textarea id="mesaj" name="Mesaj" class="form-control" rows="5" placeholder="Firmanıza iletmek istediğiniz mesajı yazınız..." required></textarea>
+            </div>
+
+            <input type="hidden" id="urunIdInput" name="UrunId" value="@Model.UrunId" />
+            <input type="hidden" name="MesajTuru" value="@Model.MesajTuru.ToString()" />
+
+            <input type="hidden" id="GirilenHucreler" name="GirilenHucreler" value='@Html.Raw(Json.Serialize(Model.GirilenHucreler ?? new List<FirmaDasboardDemo.Dtos.HucreDegeri>()))' />
+            <input type="hidden" id="GorunenHucreler" name="GorunenHucreler" value='@Html.Raw(Json.Serialize(Model.GorunenHucreler ?? new List<FirmaDasboardDemo.Dtos.HucreDegeri>()))' />
+            <input type="hidden" id="SatisFiyatlari" name="SatisFiyatlari" value='@Html.Raw(Json.Serialize(Model.SatisFiyatlari ?? new List<FirmaDasboardDemo.Dtos.HucreDegeri>()))' />
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane"></i> Gönder
+            </button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-top-right",
+            timeOut: "5000"
+        };
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const veri = localStorage.getItem("bayiSonMesaj");
+            if (veri) {
+                try {
+                    const mesaj = JSON.parse(veri);
+
+                    document.getElementById("urunIdInput").value = mesaj.urunId || 0;
+                    document.getElementsByName("MesajTuru")[0].value = "HesaplamaSonucu";
+                    document.getElementById("GirilenHucreler").value = JSON.stringify(mesaj.girilenHucreler || []);
+                    document.getElementById("GorunenHucreler").value = JSON.stringify(mesaj.gorunenHucreler || []);
+                    document.getElementById("SatisFiyatlari").value = JSON.stringify(mesaj.satisFiyatlari || []);
+
+                    // Özet alanlarını doldur
+                    document.getElementById("hesaplamaOzeti").classList.remove("d-none");
+
+                    document.getElementById("ozetUrun").innerHTML =
+                        `<p><b>Ürün:</b> ${mesaj.urunAdi || "Belirsiz"}</p>`;
+
+                    document.getElementById("ozetGorunen").innerHTML =
+                        "<b>Görünen Hücreler:</b><br/>" +
+                        (mesaj.gorunenHucreler || []).map(h =>
+                            `<span class='badge badge-primary mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join('');
+
+                    document.getElementById("ozetGirilen").innerHTML =
+                        "<b>Girilen Değerler:</b><br/>" +
+                        (mesaj.girilenHucreler || []).map(h =>
+                            `<span class='badge badge-warning text-dark mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join('');
+
+                    document.getElementById("ozetSatis").innerHTML =
+                        "<b>Hesaplanan Sonuçlar:</b><br/>" +
+                        (mesaj.satisFiyatlari || []).map(h =>
+                            `<span class='badge badge-success mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join('');
+
+                    localStorage.removeItem("bayiSonMesaj");
+
+                } catch (e) {
+                    console.error("Hesaplama özeti hatası:", e);
+                }
+            }
+        });
+
+        document.querySelector("form").addEventListener("submit", function (e) {
+            const urunId = document.getElementById("urunIdInput").value;
+            if (!urunId || parseInt(urunId) === 0) {
+                e.preventDefault();
+                toastr.error("Ürün bilgisi eksik. Lütfen tekrar hesaplama yaparak deneyin.");
+            }
+        });
+    </script>
+}

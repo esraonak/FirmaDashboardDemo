@@ -1,0 +1,38 @@
+﻿@model List<FirmaDasboardDemo.Models.HataKaydi>
+@{
+    ViewData["Title"] = "Hata Kayıtları";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml"; // veya _SuperAdminLayout.cshtml
+}
+
+<div class="card mt-3">
+    <div class="card-header">
+        <h5>Hata Bildirimleri</h5>
+    </div>
+    <div class="card-body table-responsive">
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Kullanıcı</th>
+                    <th>Rol</th>
+                    <th>Firma</th>
+                    <th>URL</th>
+                    <th>Açıklama</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.KullaniciAdi</td>
+                        <td>@item.KullaniciRol</td>
+                        <td>@item.FirmaSeo</td>
+                        <td>@item.Url</td>
+                        <td>@item.Aciklama</td>
+                        <td>@item.Tarih.ToString("dd.MM.yyyy HH:mm")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

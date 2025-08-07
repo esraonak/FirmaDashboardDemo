@@ -7,5 +7,6 @@
         public bool IsFormul { get; set; }
         public bool GozuksunMu { get; set; }
         public bool GirdimiYapabilir { get; set; }
+        public bool SatisFiyatMi { get; set; }
     }
 }

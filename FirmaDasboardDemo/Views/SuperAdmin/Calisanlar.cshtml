@@ -59,7 +59,19 @@
 </div>
 
 @section Scripts {
+    <!-- Gerekli kütüphaneler -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
     <script>
+        // toastr ayarları (isteğe bağlı)
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-bottom-right",
+            "timeOut": "3000"
+        };
+
         $(function () {
             $('#calisanTablosu').DataTable({
                 ajax: {
@@ -84,12 +96,15 @@
                                 <button class="btn btn-warning btn-sm" onclick="calisanDuzenle(${id})">Düzenle</button>
                                 <button class="btn btn-danger btn-sm" onclick="calisanSil(${id})">Sil</button>
                             `;
-                        }
+                        },
+                        orderable: false,
+                        searchable: false
                     }
                 ]
             });
         });
 
+        // ✏️ Düzenleme verilerini modal'a doldur
         function calisanDuzenle(id) {
             $.get('/SuperAdmin/CalisanGetir', { id: id }, function (data) {
                 $('#duzenleId').val(data.id);
@@ -101,6 +116,7 @@
             });
         }
 
+        // ✅ Güncelleme işlemi sonrası toastr
         function calisanGuncelle() {
             var model = {
                 id: $('#duzenleId').val(),
@@ -114,22 +130,41 @@
                 if (res.success) {
                     $('#calisanDuzenleModal').modal('hide');
                     $('#calisanTablosu').DataTable().ajax.reload();
+                    toastr.success("Çalışan başarıyla güncellendi.");
                 } else {
-                    alert("Güncelleme başarısız.");
+                    toastr.error("Güncelleme başarısız.");
                 }
+            }).fail(function () {
+                toastr.error("Sunucu hatası oluştu.");
             });
         }
 
+        // ❌ Silme işlemi (pasif yapma) SweetAlert + Toastr
         function calisanSil(id) {
-            if (confirm("Bu çalışanı pasif yapmak istiyor musunuz?")) {
-                $.post('/SuperAdmin/CalisanPasifYap', { id: id }, function (res) {
-                    if (res.success) {
-                        $('#calisanTablosu').DataTable().ajax.reload();
-                    } else {
-                        alert("İşlem başarısız.");
-                    }
-                });
-            }
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu çalışanı pasif yapmak istiyor musunuz?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Evet, pasif yap',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.post('/SuperAdmin/CalisanPasifYap', { id: id }, function (res) {
+                        if (res.success) {
+                            $('#calisanTablosu').DataTable().ajax.reload();
+                            toastr.success("Çalışan pasif yapıldı.");
+                        } else {
+                            toastr.error("İşlem başarısız.");
+                        }
+                    }).fail(function () {
+                        toastr.error("Sunucu hatası oluştu.");
+                    });
+                }
+            });
         }
     </script>
 }
+

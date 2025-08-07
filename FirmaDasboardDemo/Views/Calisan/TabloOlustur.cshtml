@@ -48,6 +48,11 @@
     <button id="btnGozuksun" class="btn btn-success" onclick="toggleMarkingMode('GozuksunMu')">🟢 Bayi Görebilsin</button>
     <button id="btnGirebilir" class="btn btn-danger" onclick="toggleMarkingMode('GirdimiYapabilir')">✍️ Bayi Değer Girebilsin</button>
     <button id="btnTemizle" class="btn btn-secondary" onclick="toggleMarkingMode('Temizle')">🧹 Gizli Kalsın</button>
+    <button id="satisFiyatButonu" class="btn btn-warning me-2" onclick="toggleMarkingMode('SatisFiyatMi')">
+        💰 Satış Fiyatı Hücresi
+    </button>
+
+
 </div>
 <div id="hot" style="margin-top: 20px; width: 100%;"></div>
 <!-- Formül Girişi ve Butonu -->
@@ -68,6 +73,12 @@
 
     .hucre-gozuksun {
         background-color: #d4edda !important; /* Açık yeşil */
+    }
+
+    .hucre-satisfiyat {
+        background-color: #fff3cd !important; /* Açık sarı */
+        font-weight: bold;
+        color: #856404; /* koyu sarı metin */
     }
 
     .btn.active {
@@ -309,6 +320,12 @@
                             markSingleCell("GirdimiYapabilir");
                         }
                     },
+                    "satisfiyat": {
+                        name: "💰 Satış Fiyat Hücresi",
+                        callback() {
+                           markSingleCell("SatisFiyatMi");
+                         }
+                     },
                     "---------": Handsontable.plugins.ContextMenu.SEPARATOR,
                     ...Handsontable.plugins.ContextMenu.DEFAULT_ITEMS
                 }
@@ -358,7 +375,10 @@
         if (formulModuAktif && formulHedefHucre && formulHedefHucre.row === row && formulHedefHucre.col === col) {
             return { className: 'htFormulaTarget' };
         }
-
+           // 💰 Satış fiyat hücresi
+        if (meta.SatisFiyatMi) {
+        return { className: 'hucre-satisfiyat' };
+        }
         // ✍️ Bayi değer girebilir
         if (meta.GirdimiYapabilir) {
             return { className: 'hucre-girebilir' };
@@ -388,6 +408,7 @@
         metaDataMap[cell] = metaDataMap[cell] || {};
         metaDataMap[cell].GozuksunMu = (mode === "GozuksunMu");
         metaDataMap[cell].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+        metaDataMap[cell].SatisFiyatMi  = (mode === "SatisFiyatMi");
         hot.render();
     }
 
@@ -406,6 +427,8 @@
             ? "🟢 Görebilsin modu aktif. Alan seçin."
             : mode === "GirdimiYapabilir"
             ? "✍️ Girebilsin modu aktif. Alan seçin."
+            : mode === "SatisFiyatMi"
+            ? "💰 Satış fiyat hücresi seçme modu aktif. Alan seçin."
             : "🧹 Gizle modu aktif. Alan seçin.";
 
         toastr.info(mesaj);
@@ -426,6 +449,8 @@
                         metaDataMap[cellId] = metaDataMap[cellId] || {};
                         metaDataMap[cellId].GozuksunMu = (mode === "GozuksunMu");
                         metaDataMap[cellId].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+                         metaDataMap[cellId].SatisFiyatMi  = (mode === "SatisFiyatMi");
+
                     }
                 }
             }
@@ -441,6 +466,7 @@
         document.getElementById("btnGozuksun").classList.toggle("active", aktifMod === "GozuksunMu");
         document.getElementById("btnGirebilir").classList.toggle("active", aktifMod === "GirdimiYapabilir");
         document.getElementById("btnTemizle").classList.toggle("active", aktifMod === "Temizle");
+         document.getElementById("satisFiyatButonu").classList.toggle("active", aktifMod === "SatisFiyatMi");
     }
 
        function kaydet() {
@@ -475,7 +501,8 @@
                         Formul: val,
                         IsFormul: typeof val === 'string' && val.trim().startsWith("="),
                         GozuksunMu: meta.GozuksunMu === true,
-                        GirdimiYapabilir: meta.GirdimiYapabilir === true
+                        GirdimiYapabilir: meta.GirdimiYapabilir === true,
+                       SatisFiyatMi: meta.SatisFiyatMi === true
                     });
                 });
             });
@@ -562,7 +589,8 @@
         if (data.id) {
             const opt = new Option(data.ad, data.id);
             document.getElementById("urunSec").appendChild(opt);
-            toastr.success("✅ Ürün eklendi: " + urunAdi);
+           toastr.success("✅ Ürün eklendi: " + data.ad);
+
 
             document.getElementById("yeniUrunAdi").value = "";
             document.getElementById("yeniUrunAciklama").value = "";
@@ -623,7 +651,7 @@
         metaDataMap[cell] = metaDataMap[cell] || {};
         metaDataMap[cell].GozuksunMu = true;
         metaDataMap[cell].GirdimiYapabilir = false;
-
+        metaDataMap[cell].SatisFiyatMi  = true;
         hot.render();
     }
 </script>

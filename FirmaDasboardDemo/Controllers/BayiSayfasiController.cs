@@ -4,6 +4,9 @@ using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Models;
 using FirmaDasboardDemo.Dtos;
 using FirmaDasboardDemo.Controllers;
+using Newtonsoft.Json;
+using FirmaDasboardDemo.Enums;
+using FirmaDasboardDemo.Helpers;
 
 
 namespace FirmaDashboardDemo.Controllers
@@ -54,11 +57,13 @@ namespace FirmaDashboardDemo.Controllers
         [HttpPost("Login")]
         public IActionResult Login(string Username, string Password)
         {
-            var bayi = _context.Bayiler.FirstOrDefault(b => b.Email == Username && b.Sifre == Password && b.AktifMi);
+            string girilenHash = HashHelper.Hash(Password); // ✅ Şifre hashlenir
+
+            var bayi = _context.Bayiler.FirstOrDefault(b => b.Email == Username && b.Sifre == girilenHash && b.AktifMi);
             if (bayi == null)
             {
-                ViewBag.Error = "Geçersiz kullanıcı adı veya şifre";
-                return View();
+                TempData["LoginError"] = "Geçersiz kullanıcı adı veya şifre";
+                return RedirectToAction("Login", new { firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl") });
             }
 
             // 🔐 FirmaSeoUrl session’dan alınmalı
@@ -66,22 +71,21 @@ namespace FirmaDashboardDemo.Controllers
             if (string.IsNullOrEmpty(firmaSeoUrl))
                 return Content("Firma bilgisi eksik.");
 
-            // 🔍 Firma bulunuyor mu?
             var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == firmaSeoUrl && f.AktifMi);
             if (firma == null)
                 return Content("Firma bulunamadı.");
 
-            // ✅ Firma ile bayi eşleşmesi var mı?
             var eslesmeVarMi = _context.BayiFirmalari
                 .Any(bf => bf.BayiId == bayi.Id && bf.FirmaId == firma.Id);
             if (!eslesmeVarMi)
                 return Content("Bu firmayla ilişkilendirilmiş bayi hesabı bulunamadı.");
 
-            // ✅ Session kayıtları
-            HttpContext.Session.SetInt32("UserId", bayi.Id); // <-- Bu satır EKSİKTİ
+            // Session kayıtları
+            HttpContext.Session.SetInt32("UserId", bayi.Id);
             HttpContext.Session.SetInt32("RolId", bayi.RolId);
             HttpContext.Session.SetString("UserAd", bayi.Ad);
             HttpContext.Session.SetString("UserRole", "Bayi");
+            HttpContext.Session.SetInt32("BayiId", bayi.Id);
 
             HttpContext.Session.SetInt32("FirmaId", firma.Id);
             HttpContext.Session.SetString("FirmaSeoUrl", firma.SeoUrl);
@@ -93,16 +97,20 @@ namespace FirmaDashboardDemo.Controllers
             HttpContext.Session.SetString("Facebook", firma.FacebookUrl ?? "");
             HttpContext.Session.SetString("WebSitesi", firma.WebSitesi ?? "");
 
-            // ✅ KVKK ve ETK kontrol
             if (!bayi.KvkkOnaylandiMi || !bayi.EtkOnaylandiMi)
             {
                 return RedirectToAction("OnayFormu", "BayiSayfasi", new { firmaSeoUrl = firma.SeoUrl });
             }
 
-            // 🔁 Başarılıysa Dashboard'a yönlendir
             return Redirect("/" + firma.SeoUrl + "/Bayi/Dashboard");
         }
 
+        [HttpGet("Logout")]
+        public IActionResult Logout(string firmaSeoUrl)
+        {
+            HttpContext.Session.Clear();
+            return RedirectToAction("Login", new { firmaSeoUrl });
+        }
 
 
 
@@ -111,7 +119,7 @@ namespace FirmaDashboardDemo.Controllers
         {
             var bayiId = HttpContext.Session.GetInt32("UserId");
             if (bayiId == null)
-                return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
+                return RedirectToAction("Login", new { firmaSeoUrl });
 
             ViewBag.PanelBaslik = $"{firmaSeoUrl.ToUpper()} BAYİ PANELİ";
             return View("BayiDashboard");
@@ -191,7 +199,8 @@ namespace FirmaDashboardDemo.Controllers
                     hucreAdi = h.HucreAdi,
                     gozuksunMu = h.GozuksunMu,
                     girdimiYapabilir = h.GirdimiYapabilir,
-                    formulMu = h.IsFormul
+                    formulMu = h.IsFormul,
+                    satisFiyatMi = h.SatisFiyatMi
                 }),
                 grid
             });
@@ -254,7 +263,11 @@ namespace FirmaDashboardDemo.Controllers
 
             var bayi = _context.Bayiler.FirstOrDefault(b => b.Id == userId);
             if (bayi == null)
-                return RedirectToAction("Login", "BayiSayfasi", new { firmaSeoUrl });
+            {
+                TempData["Error"] = "Oturum geçersiz.";
+                return RedirectToAction("Login", new { firmaSeoUrl });
+            }
+
 
             bayi.KvkkOnaylandiMi = KvkkOnaylandiMi;
             bayi.EtkOnaylandiMi = EtkOnaylandiMi;
@@ -264,9 +277,215 @@ namespace FirmaDashboardDemo.Controllers
             return Redirect("/" + firmaSeoUrl + "/Bayi/Dashboard");
         }
 
+        // BayiSayfasiController.cs
+
+        [HttpGet("BayiMesaj")]
+        public IActionResult BayiMesaj()
+        {
+            var viewModel = new BayiMesajGonderDto
+            {
+                UrunId = 0,
+                Mesaj = "",
+                GirilenHucreler = new List<HucreDegeri>(),
+                GorunenHucreler = new List<HucreDegeri>(),
+                SatisFiyatlari = new List<HucreDegeri>()
+            };
+
+            return View(viewModel);
+        }
+
+        [HttpPost("BayiMesajGonder")]
+        public IActionResult BayiMesajGonder(
+            string firmaSeoUrl,
+            [FromForm] int UrunId,
+            [FromForm] string Mesaj,
+            [FromForm] string MesajTuru,
+            [FromForm] string GirilenHucreler,
+            [FromForm] string GorunenHucreler,
+            [FromForm] string SatisFiyatlari)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+            if (bayiId == null || firmaId == null)
+                return Unauthorized();
+
+            if (!Enum.TryParse<BayiMesajTuru>(MesajTuru, out var mesajTuruEnum))
+            {
+                TempData["Error"] = "Mesaj türü geçersiz.";
+                return Redirect("/" + firmaSeoUrl + "/Bayi/BayiMesaj");
+            }
+
+            // ÜRÜN VAR MI kontrolü (HesaplamaSonucu için)
+            if (mesajTuruEnum == BayiMesajTuru.HesaplamaSonucu)
+            {
+                bool urunVarMi = _context.Urun.Any(u => u.Id == UrunId && u.FirmaId == firmaId);
+                if (!urunVarMi)
+                {
+                    TempData["Error"] = "Geçersiz ürün bilgisi.";
+                    return Redirect("/" + firmaSeoUrl + "/Bayi/BayiMesaj");
+                }
+            }
+
+            // Mesaj BAŞLIĞI (ticket) oluştur
+            var bayiMesaj = new BayiMesaj
+            {
+                BayiId = bayiId.Value,
+                FirmaId = firmaId.Value,
+                UrunId = mesajTuruEnum == BayiMesajTuru.HesaplamaSonucu ? UrunId : null,
+                Tarih = DateTime.Now,
+                GirilenHucrelerJson = JsonConvert.SerializeObject(
+                    mesajTuruEnum == BayiMesajTuru.HesaplamaSonucu ?
+                        JsonConvert.DeserializeObject<List<HucreDegeri>>(GirilenHucreler) :
+                        new List<HucreDegeri>()),
+                GorunenHucrelerJson = JsonConvert.SerializeObject(
+                    mesajTuruEnum == BayiMesajTuru.HesaplamaSonucu ?
+                        JsonConvert.DeserializeObject<List<HucreDegeri>>(GorunenHucreler) :
+                        new List<HucreDegeri>()),
+                SatisFiyatlariJson = JsonConvert.SerializeObject(
+                    mesajTuruEnum == BayiMesajTuru.HesaplamaSonucu ?
+                        JsonConvert.DeserializeObject<List<HucreDegeri>>(SatisFiyatlari) :
+                        new List<HucreDegeri>()),
+                AktifMi = true,
+                BayiGoruntulediMi = true,
+                FirmaGoruntulediMi = false,
+                MesajTuru = mesajTuruEnum
+            };
+
+            _context.BayiMesajlar.Add(bayiMesaj);
+            _context.SaveChanges(); // ID gerekiyor
+
+            // Ilk mesaj satırı
+            var mesajSatiri = new MesajSatiri
+            {
+                BayiMesajId = bayiMesaj.Id, // ✅ foreign key bağlantısı burada
+                BayiId = bayiId.Value,
+                FirmaId = firmaId.Value,
+                UrunId = bayiMesaj.UrunId,
+                Icerik = Mesaj?.Trim(),
+                GonderenFirmaMi = false,
+                Tarih = DateTime.Now,
+                OkunduMu = false
+            };
+
+            _context.MesajSatirlari.Add(mesajSatiri);
+            _context.SaveChanges();
+
+            TempData["Success"] = "Mesajınız firmaya başarıyla iletildi.";
+            return Redirect("/" + firmaSeoUrl + "/Bayi/BayiMesaj");
+        }
 
 
 
+        [HttpGet("GetSonHesaplama")]
+        public IActionResult GetSonHesaplama(string firmaSeoUrl)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+            if (bayiId == null || firmaId == null)
+                return Unauthorized();
+
+            var kayit = _context.BayiHesaplamaKayitlari
+                .Where(x => x.BayiId == bayiId && x.FirmaId == firmaId)
+                .OrderByDescending(x => x.Tarih)
+                .FirstOrDefault();
+
+            if (kayit == null)
+                return NotFound();
+
+            var urunAdi = _context.Urun.FirstOrDefault(x => x.Id == kayit.UrunId)?.Ad ?? "Bilinmiyor";
+
+            var dto = new BayiMesajVeriDto
+            {
+                UrunAdi = urunAdi,
+                GirilenHucreler = JsonConvert.DeserializeObject<List<HucreDegeri>>(kayit.GirilenHucrelerJson ?? "[]"),
+                GorunenHucreler = JsonConvert.DeserializeObject<List<HucreDegeri>>(kayit.GorunenHucrelerJson ?? "[]"),
+                SatisFiyatlari = JsonConvert.DeserializeObject<List<HucreDegeri>>(kayit.SatisFiyatlariJson ?? "[]")
+            };
+
+            return Ok(dto);
+        }
+
+        [HttpGet("Mesajlarim")]
+        public IActionResult Mesajlarim(string firmaSeoUrl)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            if (bayiId == null) return RedirectToAction("Login");
+
+            var mesajlar = _context.BayiMesajlar
+                .Include(x => x.Urun)
+                .Where(x => x.BayiId == bayiId)
+                .OrderByDescending(x => x.Tarih)
+                .ToList();
+
+            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+            return View("Mesajlarim", mesajlar);
+        }
+
+        [HttpGet("BayiMesajDetay/{id}")]
+        public IActionResult BayiMesajDetay(string firmaSeoUrl, int id)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            if (bayiId == null)
+                return RedirectToAction("Login", "Bayi", new { firmaSeoUrl });
+
+            var firma = _context.Firmalar.FirstOrDefault(f => f.SeoUrl == firmaSeoUrl);
+            if (firma == null)
+                return RedirectToAction("BayiMesaj", new { firmaSeoUrl });
+
+            var mesaj = _context.BayiMesajlar
+                .Include(m => m.Mesajlar.OrderBy(m => m.Tarih))
+                .Include(m => m.Urun)
+                .FirstOrDefault(m => m.Id == id && m.BayiId == bayiId && m.FirmaId == firma.Id);
+
+            if (mesaj == null)
+            {
+                TempData["Hata"] = "Mesaj bulunamadı.";
+                return RedirectToAction("BayiMesaj", new { firmaSeoUrl });
+            }
+
+            // Firma mesajlarını okunmuş işaretle
+            foreach (var satir in mesaj.Mesajlar.Where(m => m.GonderenFirmaMi && !m.OkunduMu))
+                satir.OkunduMu = true;
+
+            mesaj.BayiGoruntulediMi = true;
+            _context.SaveChanges();
+
+            ViewBag.FirmaSeoUrl = firmaSeoUrl;
+            return View("~/Views/BayiSayfasi/BayiMesajDetay.cshtml", mesaj);
+        }
+
+        [HttpPost("MesajaCevapEkle")]
+        public IActionResult MesajaCevapEkle(string firmaSeoUrl, int BayiMesajId, string Icerik)
+        {
+            int? bayiId = HttpContext.Session.GetInt32("BayiId");
+            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+
+            if (bayiId == null || firmaId == null || string.IsNullOrWhiteSpace(Icerik))
+                return Unauthorized();
+
+            var mesaj = _context.BayiMesajlar
+                .FirstOrDefault(m => m.Id == BayiMesajId && m.BayiId == bayiId && m.AktifMi);
+
+            if (mesaj == null)
+                return NotFound();
+
+            var yeniSatir = new MesajSatiri
+            {
+                BayiMesajId = BayiMesajId,
+                BayiId = bayiId.Value,
+                FirmaId = firmaId.Value,
+                Icerik = Icerik.Trim(),
+                GonderenFirmaMi = false,
+                Tarih = DateTime.Now,
+                OkunduMu = false
+            };
+
+            _context.MesajSatirlari.Add(yeniSatir);
+            _context.SaveChanges();
+
+            return Redirect("/" + firmaSeoUrl + "/Bayi/BayiMesajDetay/" + BayiMesajId);
+        }
 
 
     }

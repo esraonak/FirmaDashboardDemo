@@ -4,6 +4,7 @@ using FirmaDasboardDemo.Models;
 using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
+using FirmaDasboardDemo.Dtos;
 
 namespace FirmaDasboardDemo.Controllers
 {
@@ -44,6 +45,10 @@ namespace FirmaDasboardDemo.Controllers
             HttpContext.Session.SetInt32("SuperAdminId", admin.Id);
             HttpContext.Session.SetString("Rol", "SuperAdmin");
             HttpContext.Session.SetString("AdSoyad", $"{admin.Ad} {admin.Soyad}");
+            // 🔧 Bunlar hata sistemi için gerekli
+            HttpContext.Session.SetString("UserRole", "SuperAdmin");
+            HttpContext.Session.SetString("UserAd", $"{admin.Ad} {admin.Soyad}");
+            HttpContext.Session.SetString("FirmaSeoUrl", "superadmin"); // 🔄 isteğe bağlı bir sabit değer
 
             return RedirectToAction("Dashboard");
         }
@@ -149,70 +154,59 @@ namespace FirmaDasboardDemo.Controllers
             return RedirectToAction("Dashboard");
         }
 
-
-
         [HttpPost("UpdateFirma")]
-        public async Task<IActionResult> UpdateFirma(IFormCollection form)
+        public IActionResult UpdateFirma([FromBody] FirmaUpdateDto dto)
         {
-            int id = int.Parse(form["Id"]);
-            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == id);
-            if (firma == null) return NotFound();
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == dto.Id);
+            if (firma == null)
+                return NotFound();
 
-            firma.Ad = form["Ad"];
-            firma.Adres = form["Adres"];
-            firma.Il = form["Il"];
-            firma.Ilce = form["Ilce"];
-            firma.Email = form["Email"];
-            firma.Telefon = form["Telefon"];
-            firma.MaxCalisanSayisi = int.TryParse(form["MaxCalisanSayisi"], out int mcs) ? mcs : 0;
-            firma.MaxBayiSayisi = int.TryParse(form["MaxBayiSayisi"], out int mbs) ? mbs : 0;
-            firma.LisansBitisTarihi = DateTime.Parse(form["LisansBitisTarihi"]);
-            firma.AktifMi = form["AktifMi"] == "true" || form["AktifMi"] == "on";
-            firma.SeoUrl = form["SeoUrl"];
-            firma.InstagramUrl = form["InstagramUrl"];
-            firma.FacebookUrl = form["FacebookUrl"];
-            firma.TwitterUrl = form["TwitterUrl"];
-            firma.WebSitesi = form["WebSitesi"];
-
-            var logoFile = form.Files["LogoFile"];
-            if (logoFile != null && logoFile.Length > 0)
+            // ✅ Lisans tarihi kontrolü
+            if (dto.AktifMi && dto.LisansBitisTarihi <= DateTime.Today)
             {
-                // 📁 klasör: wwwroot/firma-logos/{SeoUrl}
-                var logoFolder = Path.Combine(_env.WebRootPath, "firma-logos", firma.SeoUrl);
-                if (!Directory.Exists(logoFolder))
-                    Directory.CreateDirectory(logoFolder);
-
-                var fileName = "logo.png";
-                var fullPath = Path.Combine(logoFolder, fileName);
-
-                using (var stream = logoFile.OpenReadStream())
-                using (var image = await SixLabors.ImageSharp.Image.LoadAsync(stream))
+                return Json(new
                 {
-                    int width = 300;
-                    int height = (int)(image.Height * (width / (double)image.Width));
-                    image.Mutate(x => x.Resize(width, height));
-                    await image.SaveAsPngAsync(fullPath);
-                }
-
-                firma.LogoUrl = $"/firma-logos/{firma.SeoUrl}/{fileName}";
+                    status = "error",
+                    message = "Firma aktif yapılamaz. Lisans bitiş tarihi bugünden ileri olmalıdır."
+                });
             }
 
-            // 🔁 Firma pasif yapılırsa bayi ve çalışanlar da pasif yapılmalı
+            firma.Ad = dto.Ad;
+            firma.Adres = dto.Adres;
+            firma.Il = dto.Il;
+            firma.Ilce = dto.Ilce;
+            firma.Email = dto.Email;
+            firma.Telefon = dto.Telefon;
+            firma.MaxCalisanSayisi = dto.MaxCalisanSayisi;
+            firma.MaxBayiSayisi = dto.MaxBayiSayisi;
+            firma.LisansBitisTarihi = dto.LisansBitisTarihi;
+            firma.AktifMi = dto.AktifMi;
+            firma.SeoUrl = dto.SeoUrl;
+            firma.InstagramUrl = dto.InstagramUrl;
+            firma.FacebookUrl = dto.FacebookUrl;
+            firma.TwitterUrl = dto.TwitterUrl;
+            firma.WebSitesi = dto.WebSitesi;
+            firma.LogoUrl = dto.LogoUrl;
+
+            // bayi ve calisan aktiflik eşitleme
             var bayiler = _context.Bayiler
                 .Where(b => b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id))
                 .ToList();
+
             foreach (var bayi in bayiler)
                 bayi.AktifMi = firma.AktifMi;
 
-            var calisanlar = _context.FirmaCalisanlari.Where(c => c.FirmaId == firma.Id).ToList();
+            var calisanlar = _context.FirmaCalisanlari
+                .Where(c => c.FirmaId == firma.Id)
+                .ToList();
+
             foreach (var calisan in calisanlar)
                 calisan.AktifMi = firma.AktifMi;
 
             _context.SaveChanges();
 
-            return RedirectToAction("Dashboard");
+            return Json(new { status = "success" });
         }
-
 
 
         [HttpPost("DeleteFirma")]
@@ -348,15 +342,36 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost("CalisanGuncelle")]
         public IActionResult CalisanGuncelle(int id, string adSoyad, string email, string telefon, bool aktifMi)
         {
-            var calisan = _context.FirmaCalisanlari.FirstOrDefault(c => c.Id == id);
-            if (calisan == null) return NotFound();
+            var calisan = _context.FirmaCalisanlari
+                .Include(c => c.Firma)
+                .FirstOrDefault(c => c.Id == id);
 
+            if (calisan == null)
+                return NotFound();
+
+            // ✅ Firma aktif değilse ve çalışan aktif yapılmak isteniyorsa engelle
+            if (aktifMi)
+            {
+                var firma = calisan.Firma;
+                if (firma == null || !firma.AktifMi || firma.LisansBitisTarihi <= DateTime.Today)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Firma pasif durumda veya lisans süresi dolmuş. Çalışanı aktif hale getiremezsiniz."
+                    });
+
+                }
+            }
+
+            // ✅ Güncelleme işlemi
             calisan.AdSoyad = adSoyad;
             calisan.Email = email;
             calisan.Telefon = telefon;
             calisan.AktifMi = aktifMi;
 
             _context.SaveChanges();
+
             return Json(new { success = true });
         }
 
@@ -399,31 +414,60 @@ namespace FirmaDasboardDemo.Controllers
 
             return Json(bayiler);
         }
+
         [HttpGet("BayiGetir")]
         public IActionResult BayiGetir(int id)
         {
             var bayi = _context.Bayiler
-                .Select(b => new {
-                    b.Id,
-                    adSoyad = b.Ad,
-                    b.Email,
-                    b.Telefon,
-                    lisansBitis = b.LisansSuresiBitis,
-                    aktifMi = b.AktifMi
-                })
+                .Include(b => b.BayiFirmalari)
+                .ThenInclude(bf => bf.Firma)
+                .FirstOrDefault(b => b.Id == id);
+
+            if (bayi == null) return NotFound();
+
+            return Json(new
+            {
+                id = bayi.Id,
+                adSoyad = bayi.Ad,
+                email = bayi.Email,
+                telefon = bayi.Telefon,
+                // 🟢 Önemli: Tarih formatını doğrudan yyyy-MM-dd olarak gönder
+                lisansBitis = bayi.LisansSuresiBitis == DateTime.MinValue
+                              ? null
+                              : bayi.LisansSuresiBitis.ToString("yyyy-MM-dd"),
+                aktifMi = bayi.AktifMi
+            });
+        }
+
+
+        [HttpPost("BayiGuncelle")]
+        public IActionResult BayiGuncelle(int id, string adSoyad, string email, string telefon, DateTime lisansBitis, bool aktifMi)
+        {
+            var bayi = _context.Bayiler
+                .Include(b => b.BayiFirmalari)
+                    .ThenInclude(bf => bf.Firma)
                 .FirstOrDefault(b => b.Id == id);
 
             if (bayi == null)
                 return NotFound();
 
-            return Json(bayi);
-        }
-        [HttpPost("BayiGuncelle")]
-        public IActionResult BayiGuncelle(int id, string adSoyad, string email, string telefon, DateTime lisansBitis, bool aktifMi)
-        {
-            var bayi = _context.Bayiler.FirstOrDefault(b => b.Id == id);
-            if (bayi == null)
-                return NotFound();
+            // ✅ Bağlı olduğu aktif bir firma var mı kontrolü
+            if (aktifMi)
+            {
+                var aktifFirmaVarMi = bayi.BayiFirmalari.Any(bf =>
+                    bf.Firma != null &&
+                    bf.Firma.AktifMi &&
+                    bf.Firma.LisansBitisTarihi > DateTime.Today);
+
+                if (!aktifFirmaVarMi)
+                {
+                    return Json(new
+                    {
+                        success = false,
+                        message = "Bayi aktif hale getirilemez. Bağlı olduğu firmanın lisansı bitmiş veya pasif durumda."
+                    });
+                }
+            }
 
             bayi.Ad = adSoyad;
             bayi.Email = email;
@@ -434,6 +478,8 @@ namespace FirmaDasboardDemo.Controllers
             _context.SaveChanges();
             return Json(new { success = true });
         }
+
+
         [HttpPost("BayiSil")]
         public IActionResult BayiSil(int id)
         {
@@ -510,6 +556,60 @@ namespace FirmaDasboardDemo.Controllers
 
             return Ok();
         }
+
+
+
+        [Route("SuperAdmin/Hatalar")]
+        public IActionResult Hatalar()
+        {
+            var kayitlar = _context.HataKayitlari
+                .OrderByDescending(h => h.Tarih)
+                .ToList();
+            return View(kayitlar);
+        }
+        [HttpGet("TestHata")]
+        public IActionResult TestHata()
+        {
+            throw new Exception("Test amaçlı bilinçli bir hata oluştu.");
+        }
+        [HttpGet("/SuperAdmin/HataKayitlari")]
+        public IActionResult HataKayitlari()
+        {
+            return View(); // sadece görünüm sayfasını döner
+        }
+
+        [HttpGet("/SuperAdmin/api/hatalar")]
+        public IActionResult HatalariGetir()
+        {
+            var kayitlar = _context.HataKayitlari
+                .OrderByDescending(h => h.Tarih)
+                .Select(h => new {
+                    h.Id,
+                    h.KullaniciAdi,
+                    h.KullaniciRol,
+                    h.FirmaSeo,
+                    h.Url,
+                    Tarih = h.Tarih.ToString("dd.MM.yyyy HH:mm"),
+                    h.Aciklama
+                })
+                .ToList();
+
+            return Json(new { data = kayitlar });
+        }
+
+        [HttpPost("/SuperAdmin/api/hata-sil")]
+        public IActionResult HataSil(int id)
+        {
+            var kayit = _context.HataKayitlari.Find(id);
+            if (kayit == null)
+                return NotFound();
+
+            _context.HataKayitlari.Remove(kayit);
+            _context.SaveChanges();
+            return Ok(new { status = "success" });
+        }
+
+
 
     }
 }

@@ -13,6 +13,8 @@
     <button class="btn btn-success" onclick="aktifModuAyarla('GozuksunMu')" id="btnGozuksun">🟢 Görebilsin</button>
     <button class="btn btn-danger" onclick="aktifModuAyarla('GirdimiYapabilir')" id="btnGirebilir">✍️ Girebilsin</button>
     <button class="btn btn-secondary" onclick="aktifModuAyarla('Temizle')" id="btnTemizle">🧹 Gizli Kalsın</button>
+    <button class="btn btn-warning" onclick="aktifModuAyarla('SatisFiyatMi')" id="btnSatisFiyat">💰 Satış Fiyatı</button>
+
     <input type="text" id="formulInput" class="form-control my-2" placeholder="=A1+B1 gibi formül yazın">
     <button id="btnFormulModu" onclick="toggleFormulaMode()" class="btn btn-warning mt-2">✏️ Formül Yaz</button>
 
@@ -30,6 +32,12 @@
 
     .hucre-gozuksun {
         background-color: #d4edda !important;
+    }
+
+    .hucre-satisfiyat {
+        background-color: #fff3cd !important; /* Açık sarı */
+        font-weight: bold;
+        color: #856404; /* koyu sarı metin */
     }
 
     .btn.active {
@@ -181,7 +189,8 @@
 
                     metaDataMap[h.hucreAdi] = {
                         GozuksunMu: h.gozuksunMu,
-                        GirdimiYapabilir: h.girdimiYapabilir
+                        GirdimiYapabilir: h.girdimiYapabilir,
+                        SatisFiyatMi: h.satisFiyatMi
                     };
                 });
 
@@ -206,6 +215,12 @@
                                 name: "✍️ Bayi Değer Girebilsin",
                                 callback() {
                                     markSingleCell("GirdimiYapabilir");
+                                }
+                            },
+                            "satisfiyat": {
+                              name: "💰 Satış Fiyat Hücresi",
+                              callback() {
+                               markSingleCell("SatisFiyatMi");
                                 }
                             },
                             "temizle": {
@@ -262,7 +277,9 @@
                         if (meta.GozuksunMu) {
                             return { className: 'hucre-gozuksun' };
                         }
-
+                         if (meta.SatisFiyatMi) {
+                            return { className: 'hucre-satisfiyat' };
+                        }
                         return {};
                     }
                 });
@@ -293,6 +310,7 @@
             metaDataMap[cell] = metaDataMap[cell] || {};
             metaDataMap[cell].GozuksunMu = (mode === "GozuksunMu");
             metaDataMap[cell].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+            metaDataMap[cell].SatisFiyatMi = (mode === "SatisFiyatMi");
         }
 
         hot.render();
@@ -308,14 +326,17 @@
         aktifMod = mode;
         toggleButtons();
 
-        // 🎯 Toastr uyarısı
-        if (mode === "GozuksunMu") {
-            toastr.info("🟢 Görebilsin modu aktif. Hücre seçin.");
-        } else if (mode === "GirdimiYapabilir") {
-            toastr.info("✍️ Girebilir modu aktif. Hücre seçin.");
-        } else {
-            toastr.info("🧹 Gizle modu aktif. Hücre seçin.");
-        }
+            // 🎯 Toastr uyarısı
+    if (mode === "GozuksunMu") {
+        toastr.info("🟢 Görebilsin modu aktif. Hücre seçin.");
+    } else if (mode === "GirdimiYapabilir") {
+        toastr.info("✍️ Girebilir modu aktif. Hücre seçin.");
+    } else if (mode === "SatisFiyatMi") {
+        toastr.info("💰 Satış fiyat hücresi modu aktif. Hücre seçin.");
+    } else {
+        toastr.info("🧹 Gizle modu aktif. Hücre seçin.");
+    }
+
 
         hot.addHookOnce('afterSelectionEnd', function (rowStart, colStart, rowEnd, colEnd) {
             const minRow = Math.min(rowStart, rowEnd);
@@ -332,6 +353,7 @@
                         metaDataMap[cellId] = metaDataMap[cellId] || {};
                         metaDataMap[cellId].GozuksunMu = (mode === "GozuksunMu");
                         metaDataMap[cellId].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+                         metaDataMap[cellId].SatisFiyatMi = (mode === "SatisFiyatMi");
                     }
                 }
             }
@@ -347,11 +369,14 @@
         document.getElementById("btnGozuksun").classList.toggle("active", mode === "GozuksunMu");
         document.getElementById("btnGirebilir").classList.toggle("active", mode === "GirdimiYapabilir");
         document.getElementById("btnTemizle").classList.toggle("active", mode === "Temizle");
+        document.getElementById("btnSatisFiyat").classList.toggle("active", mode === "SatisFiyatMi");
 
            if (mode === "GozuksunMu") {
         toastr.info("🟢 Görebilsin modu aktif. Hücre seçin.");
     } else if (mode === "GirdimiYapabilir") {
         toastr.info("✍️ Girebilir modu aktif. Hücre seçin.");
+    } else if (mode === "SatisFiyatMi") {
+        toastr.info("💰 Satış fiyat hücresi modu aktif. Hücre seçin.");
     } else {
         toastr.info("🧹 Gizle modu aktif. Hücre seçin.");
     }
@@ -373,6 +398,7 @@
                         metaDataMap[cellId] = metaDataMap[cellId] || {};
                         metaDataMap[cellId].GozuksunMu = (mode === "GozuksunMu");
                         metaDataMap[cellId].GirdimiYapabilir = (mode === "GirdimiYapabilir");
+                        metaDataMap[cellId].SatisFiyatMi = (mode === "SatisFiyatMi");
                     }
                 }
             }
@@ -411,7 +437,8 @@
                         Formul: value,
                         IsFormul: typeof value === 'string' && value.trim().startsWith("="),
                         GozuksunMu: meta.GirdimiYapabilir ? true : (meta.GozuksunMu ?? false),
-                        GirdimiYapabilir: meta.GirdimiYapabilir === true
+                        GirdimiYapabilir: meta.GirdimiYapabilir === true,
+                        SatisFiyatMi: meta.SatisFiyatMi === true
                     });
                 });
             });

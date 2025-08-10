@@ -5,21 +5,23 @@ using Microsoft.EntityFrameworkCore;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp;
 using FirmaDasboardDemo.Dtos;
-
+using FirmaDasboardDemo.Helpers;
+using Microsoft.Extensions.Configuration;
 namespace FirmaDasboardDemo.Controllers
 {
     [Route("SuperAdmin")]
     public class SuperAdminController : BaseSuperAdminController
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
 
-        public SuperAdminController(ApplicationDbContext context, IWebHostEnvironment env)
+        public SuperAdminController(ApplicationDbContext context, IWebHostEnvironment env, IConfiguration configuration) // IConfiguration parametresi ekle
         {
             _context = context;
             _env = env;
+            _configuration = configuration; // ATAMA YAP
         }
-
         [HttpGet("Login")]
         public IActionResult Login()
         {
@@ -281,12 +283,43 @@ namespace FirmaDasboardDemo.Controllers
             if (rol == null)
                 return Json(new { status = "role_not_found" });
 
+            // 1️⃣ Rastgele şifre üret
+            string randomPassword = SifreUretici.RastgeleSifreUret();
+
+            // 2️⃣ Firma bilgilerini al
+            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
+            if (firma == null)
+                return Json(new { status = "firma_not_found" });
+
+            // 3️⃣ Önce firma mailine bilgilendirme gönder
+            string firmaMailIcerik = $"{form["AdSoyad"]} adlı yeni çalışan sisteme eklendi.\n" +
+                                     $"Email: {email}\n" +
+                                     $"Telefon: {form["Telefon"]}";
+            MailHelper.MailGonder(firma.Email, "Yeni Çalışan Bilgisi", firmaMailIcerik);
+
+            // 4️⃣ Çalışanın kendi mailine giriş bilgilerini gönder
+            string baseUrl = _configuration["Sistem:BaseUrl"];
+            string calisanUrl = $"{baseUrl}/{firma.SeoUrl}/Admin/Login";
+
+            string calisanMailIcerik = $"Merhaba {form["AdSoyad"]},\n\n" +
+                                        $"TenteCRM hesabınız oluşturuldu.\n" +
+                                        $"Giriş URL: {calisanUrl}\n" +
+                                        $"Kullanıcı Adı: {email}\n" +
+                                        $"Şifreniz: {randomPassword}";
+            bool mailBasarili = MailHelper.MailGonder(email, "TenteCRM Hesap Bilgileriniz", calisanMailIcerik);
+
+            if (!mailBasarili)
+            {
+                return Json(new { status = "mail_error" });
+            }
+
+            // 5️⃣ Şifreyi hashle ve veritabanına kaydet
             var calisan = new FirmaCalisani
             {
                 AdSoyad = form["AdSoyad"],
                 Email = email,
                 Telefon = form["Telefon"],
-                Sifre = form["Sifre"],
+                Sifre = HashHelper.Hash(randomPassword), // Hashlenmiş şifre
                 AktifMi = form["AktifMi"] == "on",
                 RolId = rol.Id,
                 FirmaId = firmaId,
@@ -298,6 +331,7 @@ namespace FirmaDasboardDemo.Controllers
 
             return Json(new { status = "success" });
         }
+
 
         [HttpGet("Calisanlar")]
         public IActionResult Calisanlar()

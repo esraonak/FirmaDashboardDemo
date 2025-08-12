@@ -4,13 +4,75 @@
     var firmaSeo = ViewBag.FirmaSeoUrl as string;
 }
 
+@section Styles {
+    <style>
+        /* Detay başlığı ve bilgi alanları */
+        .meta-row b {
+            white-space: nowrap;
+        }
+
+        .meta-row {
+            word-break: break-word;
+        }
+
+        /* Hesaplama rozetleri taşmadan dizilsin */
+        .badge {
+            margin-right: .35rem;
+            margin-bottom: .35rem;
+        }
+
+        /* Sohbet kutusu: ekran yüksekliğine duyarlı */
+        .chat-box {
+            max-height: min(60vh, 500px);
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        /* Mesaj baloncukları */
+        .bubble {
+            padding: .6rem .75rem;
+            border-radius: .75rem;
+            max-width: 70%;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+            .bubble .content {
+                white-space: pre-wrap;
+            }
+        /* satır sonları korunsun */
+
+        .bubble-firma {
+            background: #e9ecef;
+        }
+        /* firma (sol) */
+        .bubble-bayi {
+            background: #d1ecf1;
+        }
+        /* bayi (sağ)  */
+
+        @@media (max-width:576px) {
+            .bubble
+
+        {
+            max-width: 100%;
+        }
+
+        .btn-block-sm {
+            width: 100%;
+        }
+
+        }
+    </style>
+}
+
 <div class="card">
     <div class="card-header bg-info text-white">
         <h5 class="mb-0">📨 Mesaj Detayı</h5>
     </div>
 
     <div class="card-body">
-        <div class="mb-3">
+        <div class="mb-3 meta-row">
             <b>Gönderim Tarihi:</b> @Model.Tarih.ToString("dd.MM.yyyy HH:mm") <br />
             <b>Ürün:</b> @(Model.Urun?.Ad ?? "-") <br />
             <b>Mesaj Türü:</b> @Model.MesajTuru.ToString() <br />
@@ -31,20 +93,20 @@
         @if (Model.MesajTuru == FirmaDasboardDemo.Enums.BayiMesajTuru.HesaplamaSonucu)
         {
             <div class="alert alert-secondary">
-                <h6><i class="fas fa-calculator"></i> Hesaplama Özeti</h6>
-                <div>
+                <h6 class="mb-2"><i class="fas fa-calculator"></i> Hesaplama Özeti</h6>
+                <div class="mb-2">
                     <b>Görünen Hücreler:</b><br />
                     @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.GorunenHucrelerJson ?? "[]"))
                     {
-                        <span class="badge badge-primary mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                        <span class="badge badge-primary">@h.HucreAdi = @h.Deger</span>
                     }
                 </div>
                 <hr />
-                <div>
+                <div class="mb-2">
                     <b>Girilen Hücreler:</b><br />
                     @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.GirilenHucrelerJson ?? "[]"))
                     {
-                        <span class="badge badge-warning text-dark mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                        <span class="badge badge-warning text-dark">@h.HucreAdi = @h.Deger</span>
                     }
                 </div>
                 <hr />
@@ -52,7 +114,7 @@
                     <b>Satış Fiyatları:</b><br />
                     @foreach (var h in Newtonsoft.Json.JsonConvert.DeserializeObject<List<FirmaDasboardDemo.Dtos.HucreDegeri>>(Model.SatisFiyatlariJson ?? "[]"))
                     {
-                        <span class="badge badge-success mr-1 mb-1">@h.HucreAdi = @h.Deger</span>
+                        <span class="badge badge-success">@h.HucreAdi = @h.Deger</span>
                     }
                 </div>
             </div>
@@ -63,18 +125,17 @@
         <!-- Mesajlaşma Geçmişi -->
         <div class="mt-4">
             <h6><i class="fas fa-comments"></i> Mesajlaşma Geçmişi</h6>
-            <div class="border p-3 rounded bg-light" style="max-height: 400px; overflow-y: auto;">
+            <div class="border p-3 rounded chat-box">
                 @foreach (var m in Model.Mesajlar.OrderBy(m => m.Tarih))
                 {
                     <div class="mb-3">
-                        <div class="d-flex @((m.GonderenFirmaMi ? "justify-content-start" : "justify-content-end"))">
-                            <div class="p-2 rounded"
-                                 style="background-color: @(m.GonderenFirmaMi ? "#e9ecef" : "#d1ecf1"); max-width: 70%;">
-                                <div class="small text-muted">
+                        <div class="d-flex @(m.GonderenFirmaMi ? "justify-content-start" : "justify-content-end")">
+                            <div class="bubble @(m.GonderenFirmaMi ? "bubble-firma" : "bubble-bayi")">
+                                <div class="small text-muted mb-1">
                                     @(m.GonderenFirmaMi ? Model.Firma?.Ad : "Siz")
-                                    - @m.Tarih.ToString("dd.MM.yyyy HH:mm")
+                                    • @m.Tarih.ToString("dd.MM.yyyy HH:mm")
                                 </div>
-                                <div>@m.Icerik</div>
+                                <div class="content">@m.Icerik</div>
                             </div>
                         </div>
                     </div>
@@ -93,14 +154,14 @@
                 <div class="form-group">
                     <textarea name="Icerik" class="form-control" rows="3" placeholder="Mesajınızı yazın..." required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary mt-2">
+                <button type="submit" class="btn btn-primary mt-2 btn-block-sm">
                     <i class="fas fa-paper-plane"></i> Gönder
                 </button>
             </form>
         }
 
         <!-- Geri Dön -->
-        <a href="/@firmaSeo/Bayi/BayiMesajlar" class="btn btn-secondary mt-3">
+        <a href="/@firmaSeo/Bayi/BayiMesajlar" class="btn btn-secondary mt-3 btn-block-sm">
             <i class="fas fa-arrow-left"></i> Mesajlara Dön
         </a>
     </div>

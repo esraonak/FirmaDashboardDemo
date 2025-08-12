@@ -6,45 +6,67 @@
     ViewBag.SirketSeoUrl = seoUrl;
 }
 
-
 @section Styles {
+    <!-- DataTables core + Responsive CSS (temel sürüm) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+
     <style>
         .action-buttons {
             display: flex;
-            gap: 5px;
+            gap: 6px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        /* Küçük ekran uyumu için ufak dokunuşlar */
+        .modal .form-control {
+            font-size: .95rem;
+        }
+
+        .modal .form-check-label {
+            margin-left: .25rem;
+        }
+        /* DataTable tam genişlik + taşma kontrolü */
+        #calisanTable {
+            width: 100% !important;
         }
     </style>
 }
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title">Çalışan Listesi</h3>
+        <h3 class="card-title mb-0">Çalışan Listesi</h3>
         <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addModal">Yeni Çalışan Ekle</button>
     </div>
     <div class="card-body">
-        <table id="calisanTable" class="display nowrap" style="width:100%">
-            <thead>
-                <tr>
-                    <th>Ad Soyad</th>
-                    <th>Email</th>
-                    <th>Telefon</th>
-                    <th>Aktif</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-        </table>
+        <div class="table-responsive">
+            <table id="calisanTable" class="display nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Ad Soyad</th>
+                        <th>Email</th>
+                        <th>Telefon</th>
+                        <th>Aktif</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
     </div>
 </div>
 
 <!-- ➕ Yeni Çalışan Ekle Modalı -->
-<div class="modal fade" id="addModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <form id="addForm">
-
                 <div class="modal-header">
-                    <h5 class="modal-title">Yeni Çalışan</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="addModalLabel">Yeni Çalışan</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <input name="AdSoyad" class="form-control mb-2" placeholder="Ad Soyad" required />
@@ -61,24 +83,35 @@
 </div>
 
 <!-- ✏️ Düzenleme Modalı -->
-<!-- ✏️ Düzenleme Modalı -->
-<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <form id="editForm">
-                <!-- ⛔️ action ve method kaldırıldı -->
+                <!-- ⛔️ action ve method yok; AJAX ile gönderilecek -->
                 <div class="modal-header">
-                    <h5 class="modal-title">Çalışan Düzenle</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="editModalLabel">Çalışan Düzenle</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
                 <div class="modal-body">
                     <input name="Id" type="hidden" />
-                    <input name="AdSoyad" class="form-control mb-2" placeholder="Ad Soyad" required />
-                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" />
-                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" />
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" name="AktifMi" />
-                        <label class="form-check-label">Aktif</label>
+                    <div class="form-row">
+                        <div class="form-group col-12 col-md-6">
+                            <input name="AdSoyad" class="form-control" placeholder="Ad Soyad" required />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Email" type="email" class="form-control" placeholder="Email" />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Telefon" class="form-control" placeholder="Telefon" />
+                        </div>
+                        <div class="form-group col-12 col-md-6 d-flex align-items-center">
+                            <div class="form-check mt-1">
+                                <input type="checkbox" class="form-check-input" name="AktifMi" id="editAktifMi" />
+                                <label class="form-check-label" for="editAktifMi">Aktif</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -90,55 +123,71 @@
     </div>
 </div>
 
-
 @section Scripts {
-    <!-- toastr.css -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
-
-    <!-- toastr.js -->
+    <!-- SweetAlert2 + Toastr -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- DataTables core + Responsive JS (temel sürüm) -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 
     <script>
         const seo = '@ViewBag.SirketSeoUrl';
 
+        // toastr ayarları
+        toastr.options = {
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            timeOut: "3000"
+        };
+
         $(document).ready(function () {
-            // 📊 DataTable başlat
+            // 📊 DataTable
             const table = $('#calisanTable').DataTable({
-                ajax: {
-                    url: `/${seo}/Admin/Calisan/GetCalisanlar`,
-                    dataSrc: ''
+                ajax: { url: `/${seo}/Admin/Calisan/GetCalisanlar`, dataSrc: '' },
+                responsive: true,
+                autoWidth: false,
+                deferRender: true,
+                pageLength: 10,
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
                 },
                 columns: [
-                    { data: 'adSoyad' },
-                    { data: 'email' },
-                    { data: 'telefon' },
+                    { data: 'adSoyad', responsivePriority: 1 },
+                    { data: 'email', responsivePriority: 3 },
+                    { data: 'telefon', responsivePriority: 4 },
                     {
                         data: 'aktifMi',
-                        render: data => data ? 'Evet' : 'Hayır'
+                        className: 'text-center',
+                        width: '80px',
+                        render: data => data
+                            ? '<span class="badge badge-success">Evet</span>'
+                            : '<span class="badge badge-secondary">Hayır</span>'
                     },
                     {
                         data: 'id',
-                        render: data => `
-                            <div class="action-buttons text-center">
-                                <button class="btn btn-warning btn-sm edit-btn" data-id="${data}">
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-nowrap',
+                        responsivePriority: 1,
+                        render: id => `
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">
                                     <i class="fas fa-edit"></i> Düzenle
                                 </button>
-                                <button class="btn btn-danger btn-sm delete-btn" data-id="${data}">
+                                <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">
                                     <i class="fas fa-trash-alt"></i> Sil
                                 </button>
-                            </div>
-                        `,
-                        orderable: false,
-                        searchable: false
+                            </div>`
                     }
                 ],
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
-                }
+                order: [] // varsayılan sıralama yok
             });
 
             // ➕ Çalışan Ekle
-            $('#addForm').submit(function (e) {
+            $('#addForm').on('submit', function (e) {
                 e.preventDefault();
                 const formData = $(this).serialize();
 
@@ -156,7 +205,8 @@
                         case "success":
                             $('#addModal').modal('hide');
                             toastr.success("✅ Çalışan başarıyla eklendi.");
-                            table.ajax.reload();
+                            table.ajax.reload(null, false);
+                            $('#addForm')[0].reset();
                             break;
                         default:
                             toastr.error("⚠️ Çalışan eklenirken beklenmeyen bir hata oluştu.");
@@ -167,7 +217,7 @@
                 });
             });
 
-            // ✏️ Düzenle
+            // ✏️ Düzenle (modal doldur)
             $('#calisanTable').on('click', '.edit-btn', function () {
                 const id = $(this).data('id');
                 $.get(`/${seo}/Admin/Calisan/GetCalisanById/${id}`, function (data) {
@@ -184,9 +234,8 @@
             });
 
             // 🔁 Güncelle
-            $('#editForm').submit(function (e) {
+            $('#editForm').on('submit', function (e) {
                 e.preventDefault();
-
                 const form = $(this);
                 const formData = {
                     Id: form.find('input[name="Id"]').val(),
@@ -205,7 +254,7 @@
                         if (res.status === 'success') {
                             $('#editModal').modal('hide');
                             toastr.success("✅ Çalışan başarıyla güncellendi.");
-                            table.ajax.reload();
+                            table.ajax.reload(null, false);
                         } else if (res.status === 'email_exists') {
                             toastr.error("❌ Bu e-posta zaten başka bir kullanıcıda kayıtlı.");
                         } else {
@@ -236,7 +285,7 @@
                         $.post(`/${seo}/Admin/Calisan/DeleteCalisan`, { id }, function (res) {
                             if (res.status === "deleted") {
                                 toastr.success("✅ Çalışan başarıyla silindi.");
-                                table.ajax.reload();
+                                table.ajax.reload(null, false);
                             } else {
                                 toastr.error("❌ Silme işlemi başarısız oldu.");
                             }
@@ -248,5 +297,4 @@
             });
         });
     </script>
-
 }

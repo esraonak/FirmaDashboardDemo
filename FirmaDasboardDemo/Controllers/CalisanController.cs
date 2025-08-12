@@ -13,12 +13,15 @@ namespace FirmaDashboardDemo.Controllers
     public class CalisanController : BaseAdminController
     {
         private readonly ApplicationDbContext _context;
-
-        public CalisanController(ApplicationDbContext context) : base(context)
+        private readonly IConfiguration _configuration;
+        public CalisanController(
+          ApplicationDbContext context,
+          IConfiguration configuration
+      ) : base(context)
         {
             _context = context;
+            _configuration = configuration;
         }
-
         [HttpGet("Login")]
         public IActionResult Login(string firmaSeoUrl)
         {
@@ -303,73 +306,88 @@ namespace FirmaDashboardDemo.Controllers
         {
             try
             {
-                // 🛡️ Giriş kontrolü
-                if (HttpContext.Session.GetInt32("CalisanId") == null)
-                {
-                    return RedirectToAction("Login", "Calisan", new
-                    {
-                        firmaSeoUrl = HttpContext.Session.GetString("FirmaSeoUrl")
-                    });
-                }
-
-                // 🔐 Firma bilgisi
-                var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
+                // 0) Oturum ve firma kontrolü
+                var calisanSessionId = HttpContext.Session.GetInt32("CalisanId");
                 var firmaId = HttpContext.Session.GetInt32("FirmaId");
+                var firmaSeo = HttpContext.Session.GetString("FirmaSeoUrl");
 
-                if (firmaId == null)
-                    return Unauthorized();
+                if (calisanSessionId == null || firmaId == null)
+                {
+                    return RedirectToAction("Login", "Calisan", new { firmaSeoUrl = firmaSeo });
+                }
 
                 var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
                 if (firma == null)
                     return BadRequest(new { status = "firma_not_found" });
 
-                // 👥 Maksimum çalışan kontrolü
-                int mevcutCalisanSayisi = _context.FirmaCalisanlari.Count(c => c.FirmaId == firma.Id);
-                if (mevcutCalisanSayisi >= firma.MaxCalisanSayisi)
-                    return Json(new { status = "max_calisan_limit" });
+                // 1) Limit ve tekillik kontrolleri
+                int mevcutCalisan = _context.FirmaCalisanlari.Count(c => c.FirmaId == firma.Id);
+                if (firma.MaxCalisanSayisi > 0 && mevcutCalisan >= firma.MaxCalisanSayisi)
+                    return Json(new { status = "max_calisan_limit", message = "Maksimum çalışan limitine ulaşıldı." });
 
-                // 📧 Email benzersizlik kontrolü
+                string email = (model.Email ?? "").Trim();
+                string adSoyad = (model.AdSoyad ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(adSoyad))
+                    return Json(new { status = "validation_error", message = "Ad Soyad ve E-posta zorunludur." });
+
                 bool emailExists =
-                    _context.FirmaCalisanlari.Any(c => c.Email == model.Email && c.FirmaId == firma.Id) ||
-                    _context.Bayiler.Any(b =>
-                        b.Email == model.Email &&
-                        b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
-                    firma.Email == model.Email;
+                    _context.FirmaCalisanlari.Any(c => c.Email == email && c.FirmaId == firma.Id) ||
+                    _context.Bayiler.Any(b => b.Email == email && b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+                    string.Equals(firma.Email ?? "", email, StringComparison.OrdinalIgnoreCase);
 
                 if (emailExists)
-                    return Json(new { status = "email_exists" });
+                    return Json(new { status = "email_exists", message = "Bu e-posta zaten kullanılıyor." });
 
-                // 🔑 Rol kontrolü
                 var calisanRol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
                 if (calisanRol == null)
                     return BadRequest(new { status = "role_not_found" });
 
-                // 📝 Model hazırlığı
-                model.FirmaId = firma.Id;
-                string rastgeleSifre = SifreUretici.RastgeleSifreUret(8);
-                model.Sifre = HashHelper.Hash(rastgeleSifre);
-                model.AktifMi = true;
-                model.RolId = calisanRol.Id;
+                // Firma pasif / lisansı bitmişse aktif çalışan açmayı engelle
+                if ((!firma.AktifMi || firma.LisansBitisTarihi <= DateTime.Today))
+                    return Json(new { status = "firma_pasif", message = "Firma pasif veya lisansı bitmiş." });
 
-                // ✉️ Mail içeriği
-                string loginUrl = $"{Request.Scheme}://{Request.Host}/{firma.SeoUrl}/Admin/Login";
+                // 2) Rastgele şifre + login URL
+                string rawPassword = SifreUretici.RastgeleSifreUret(10);
+                string baseUrl = _configuration["Sistem:BaseUrl"];
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                    baseUrl = $"{Request.Scheme}://{Request.Host}"; // fallback
+
+                string loginUrl = $"{baseUrl}/{firma.SeoUrl}/Admin/Login";
+
+                // 3) Mail – başarısızsa kayıt yapma
                 string konu = "TenteCRM Giriş Bilgileriniz";
-                string icerik = $"Merhaba {model.AdSoyad},\n\n" +
-                                $"TenteCRM sistemine giriş bilgileriniz aşağıdadır:\n" +
-                                $"E-posta: {model.Email}\n" +
-                                $"Şifre: {rastgeleSifre}\n\n" +
-                                $"Giriş için bağlantı: {loginUrl}\n\n" +
-                                $"İyi çalışmalar.";
+                string icerik =
+                    $"Merhaba {adSoyad},\n\n" +
+                    $"TenteCRM hesabınız oluşturuldu.\n\n" +
+                    $"Giriş URL: {loginUrl}\n" +
+                    $"Kullanıcı Adı: {email}\n" +
+                    $"Şifreniz: {rawPassword}\n\n" +
+                    $"Giriş yaptıktan sonra lütfen şifrenizi değiştirin.";
 
-                // 📤 Mail gönderimi
-                bool mailBasarili = MailHelper.MailGonder(model.Email, konu, icerik);
-                if (!mailBasarili)
+                var (ok, error) = MailHelper.MailGonderDetay(email, konu, icerik);
+                if (!ok)
                 {
-                    // ✅ Kayıt yapmadan çık, log da eklenebilir
-                    return Json(new { status = "mail_failed" });
+                    // İstersen logla
+                     _context.HataKayitlari.Add(new HataKaydi {
+                         KullaniciRol = "Calisan",
+                         KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "-",
+                         FirmaSeo     = firma.SeoUrl,
+                        Url          = HttpContext.Request?.Path.Value,
+                       Tarih        = DateTime.Now,
+                         Aciklama     = "SMTP hata: " + (error ?? "-")
+                    });
+                     _context.SaveChanges();
+
+                    return Json(new { status = "mail_error", message = error ?? "E-posta gönderilemedi." });
                 }
 
-                // ✅ Kayıt işlemi
+                // 4) Mail başarılıysa DB’ye kaydet (hash’li şifre)
+                model.FirmaId = firma.Id;
+                model.RolId = calisanRol.Id;
+                model.AktifMi = true;
+                model.Sifre = HashHelper.Hash(rawPassword);
+                model.LisansSuresiBitis = DateTime.Now.AddYears(1);
+
                 _context.FirmaCalisanlari.Add(model);
                 _context.SaveChanges();
 
@@ -377,8 +395,9 @@ namespace FirmaDashboardDemo.Controllers
             }
             catch (Exception ex)
             {
-                // 🛠️ Hata loglanabilir (örneğin bir log servisine)
-                Console.WriteLine("Çalışan eklenirken hata: " + ex.Message);
+                // İstersen burada da loglayabilirsin
+                // _context.HataKayitlari.Add(new HataKaydi { ... });
+                // _context.SaveChanges();
 
                 return Json(new { status = "unexpected_error", message = ex.Message });
             }

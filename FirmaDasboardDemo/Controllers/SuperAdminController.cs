@@ -89,72 +89,124 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost("AddFirma")]
         public async Task<IActionResult> AddFirma(IFormCollection form)
         {
-           
-
-            // 🔒 Email veya Firma adı zaten varsa uyarı ver
-            
-            string ad = form["Ad"];
-            string email = form["Email"];
-
-            // ✅ Mevcut firma adı kontrolü
-            if (_context.Firmalar.Any(f => f.Ad.ToLower() == ad.ToLower()))
+            try
             {
-                TempData["Hata"] = "Bu firma adı zaten mevcut!";
+                var ad = (form["Ad"].ToString() ?? "").Trim();
+                var email = (form["Email"].ToString() ?? "").Trim();
+                var seo = (form["SeoUrl"].ToString() ?? "").Trim();
+
+                if (string.IsNullOrWhiteSpace(ad) || string.IsNullOrWhiteSpace(seo))
+                {
+                    TempData["Hata"] = "Firma Adı ve Seo URL zorunludur.";
+                    return RedirectToAction("Dashboard");
+                }
+
+                if (_context.Firmalar.Any(f => f.Ad.ToLower() == ad.ToLower()))
+                {
+                    TempData["Hata"] = "Bu firma adı zaten mevcut!";
+                    return RedirectToAction("Dashboard");
+                }
+
+                if (!string.IsNullOrEmpty(email) &&
+                    _context.Firmalar.Any(f => (f.Email ?? "").ToLower() == email.ToLower()))
+                {
+                    TempData["Hata"] = "Bu email adresi zaten kullanılıyor!";
+                    return RedirectToAction("Dashboard");
+                }
+
+                // varsayılan logo (NOT NULL kolon güvenliği)
+                const string defaultLogo = "/assets/img/default-logo.png";
+
+                var firma = new Firma
+                {
+                    Ad = ad,
+                    Email = email,
+                    Telefon = form["Telefon"],
+                    SeoUrl = seo,
+                    LisansBitisTarihi = string.IsNullOrEmpty(form["LisansBitisTarihi"])
+                                            ? DateTime.Now
+                                            : DateTime.Parse(form["LisansBitisTarihi"]),
+                    Adres = form["Adres"],
+                    Il = form["Il"],
+                    Ilce = form["Ilce"],
+                    InstagramUrl = form["InstagramUrl"],
+                    FacebookUrl = form["FacebookUrl"],
+                    TwitterUrl = form["TwitterUrl"],
+                    WebSitesi = form["WebSitesi"],
+                    MaxCalisanSayisi = int.TryParse(form["MaxCalisanSayisi"], out var mcs) ? mcs : 0,
+                    MaxBayiSayisi = int.TryParse(form["MaxBayiSayisi"], out var mbs) ? mbs : 0,
+                    AktifMi = form["AktifMi"] == "on",
+                    LogoUrl = defaultLogo
+                };
+
+                var logoFile = form.Files["LogoFile"];
+                if (logoFile != null && logoFile.Length > 0)
+                {
+                    // WebRoot fallback + güvenli klasör oluşturma
+                    var webRoot = _env.WebRootPath;
+                    if (string.IsNullOrWhiteSpace(webRoot))
+                        webRoot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+                    var logoFolder = Path.Combine(webRoot, "firma-logos", firma.SeoUrl);
+
+                    try
+                    {
+                        Directory.CreateDirectory(logoFolder);          // yoksa oluştur
+                        var fullPath = Path.Combine(logoFolder, "logo.png");
+
+                        using var stream = logoFile.OpenReadStream();
+                        using var image = await SixLabors.ImageSharp.Image.LoadAsync(stream);
+
+                        var width = 300;
+                        var height = (int)(image.Height * (width / (double)image.Width));
+                        image.Mutate(x => x.Resize(width, height));
+                        await image.SaveAsPngAsync(fullPath);
+
+                        firma.LogoUrl = $"/firma-logos/{firma.SeoUrl}/logo.png";
+                    }
+                    catch (UnauthorizedAccessException uaex)
+                    {
+                        // Yetki hatası: default logoda bırak, kaydı yine de al
+                        _context.HataKayitlari.Add(new HataKaydi
+                        {
+                            KullaniciRol = "SuperAdmin",
+                            KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "SuperAdmin",
+                            FirmaSeo = "superadmin",
+                            Url = "/SuperAdmin/AddFirma",
+                            Tarih = DateTime.Now,
+                            Aciklama = "Logo klasörü yazma yetkisi yok: " + uaex.Message
+                        });
+
+                        await _context.SaveChangesAsync();
+
+                        firma.LogoUrl = defaultLogo;
+                    }
+                }
+
+                _context.Firmalar.Add(firma);
+                await _context.SaveChangesAsync();
+
+                TempData["Mesaj"] = "Firma başarıyla eklendi.";
                 return RedirectToAction("Dashboard");
             }
-
-            // ✅ Mevcut email kontrolü
-            if (_context.Firmalar.Any(f => f.Email.ToLower() == email.ToLower()))
+            catch (Exception ex)
             {
-                TempData["Hata"] = "Bu email adresi zaten kullanılıyor!";
+                _context.HataKayitlari.Add(new HataKaydi
+                {
+                    KullaniciRol = "SuperAdmin",
+                    KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "SuperAdmin",
+                    FirmaSeo = "superadmin",
+                    Url = "/SuperAdmin/AddFirma",
+                    Tarih = DateTime.Now,
+                    Aciklama = ex.Message
+                });
+                await _context.SaveChangesAsync();
+
+                TempData["Hata"] = "Firma eklenirken bir hata oluştu: " + ex.Message;
                 return RedirectToAction("Dashboard");
             }
-
-            var firma = new Firma
-            {
-                Ad = ad,
-                Email = email,
-                Telefon = form["Telefon"],
-                SeoUrl = form["SeoUrl"],
-                LisansBitisTarihi = string.IsNullOrEmpty(form["LisansBitisTarihi"]) ? DateTime.Now : DateTime.Parse(form["LisansBitisTarihi"]),
-                Adres = form["Adres"],
-                Il = form["Il"],
-                Ilce = form["Ilce"],
-                InstagramUrl = form["InstagramUrl"],
-                FacebookUrl = form["FacebookUrl"],
-                TwitterUrl = form["TwitterUrl"],
-                WebSitesi = form["WebSitesi"],
-                MaxCalisanSayisi = int.TryParse(form["MaxCalisanSayisi"], out int mcs) ? mcs : 0,
-                MaxBayiSayisi = int.TryParse(form["MaxBayiSayisi"], out int mbs) ? mbs : 0,
-                AktifMi = form["AktifMi"] == "on"
-            };
-
-            var logoFile = form.Files["LogoFile"];
-            if (logoFile != null && logoFile.Length > 0)
-            {
-                var logoFolder = Path.Combine(_env.WebRootPath, "firma-logos", firma.SeoUrl);
-                if (!Directory.Exists(logoFolder))
-                    Directory.CreateDirectory(logoFolder);
-
-                var fileName = "logo.png";
-                var fullPath = Path.Combine(logoFolder, fileName);
-
-                using var stream = logoFile.OpenReadStream();
-                using var image = await SixLabors.ImageSharp.Image.LoadAsync(stream);
-
-                int width = 300;
-                int height = (int)(image.Height * (width / (double)image.Width));
-                image.Mutate(x => x.Resize(width, height));
-                await image.SaveAsPngAsync(fullPath);
-
-                firma.LogoUrl = $"/firma-logos/{firma.SeoUrl}/{fileName}";
-            }
-
-            _context.Firmalar.Add(firma);
-            _context.SaveChanges();
-
-            return RedirectToAction("Dashboard");
         }
+
 
         [HttpPost("UpdateFirma")]
         public IActionResult UpdateFirma([FromBody] FirmaUpdateDto dto)
@@ -268,68 +320,115 @@ namespace FirmaDasboardDemo.Controllers
         [HttpPost("AddCalisan")]
         public IActionResult AddCalisan(IFormCollection form)
         {
-            if (!int.TryParse(form["FirmaId"], out int firmaId))
-                return Json(new { status = "invalid_firma" });
-
-            string email = form["Email"];
-            bool emailExists = _context.FirmaCalisanlari.Any(c => c.Email == email)
-                || _context.Firmalar.Any(f => f.Email == email)
-                || _context.Bayiler.Any(b => b.Email == email);
-
-            if (emailExists)
-                return Json(new { status = "email_exists" });
-
-            var rol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
-            if (rol == null)
-                return Json(new { status = "role_not_found" });
-
-            // 1️⃣ Rastgele şifre üret
-            string randomPassword = SifreUretici.RastgeleSifreUret();
-
-            // 2️⃣ Firma bilgilerini al
-            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
-            if (firma == null)
-                return Json(new { status = "firma_not_found" });
-
-            // 3️⃣ Önce firma mailine bilgilendirme gönder
-            string firmaMailIcerik = $"{form["AdSoyad"]} adlı yeni çalışan sisteme eklendi.\n" +
-                                     $"Email: {email}\n" +
-                                     $"Telefon: {form["Telefon"]}";
-            MailHelper.MailGonder(firma.Email, "Yeni Çalışan Bilgisi", firmaMailIcerik);
-
-            // 4️⃣ Çalışanın kendi mailine giriş bilgilerini gönder
-            string baseUrl = _configuration["Sistem:BaseUrl"];
-            string calisanUrl = $"{baseUrl}/{firma.SeoUrl}/Admin/Login";
-
-            string calisanMailIcerik = $"Merhaba {form["AdSoyad"]},\n\n" +
-                                        $"TenteCRM hesabınız oluşturuldu.\n" +
-                                        $"Giriş URL: {calisanUrl}\n" +
-                                        $"Kullanıcı Adı: {email}\n" +
-                                        $"Şifreniz: {randomPassword}";
-            bool mailBasarili = MailHelper.MailGonder(email, "TenteCRM Hesap Bilgileriniz", calisanMailIcerik);
-
-            if (!mailBasarili)
+            try
             {
-                return Json(new { status = "mail_error" });
+                if (!int.TryParse(form["FirmaId"], out int firmaId))
+                    return Json(new { status = "invalid_firma", message = "FirmaId geçersiz." });
+
+                string adSoyad = (form["AdSoyad"].ToString() ?? "").Trim();
+                string email = (form["Email"].ToString() ?? "").Trim();
+                string telefon = (form["Telefon"].ToString() ?? "").Trim();
+                bool aktifMi = form["AktifMi"] == "on";
+
+                if (string.IsNullOrWhiteSpace(adSoyad) || string.IsNullOrWhiteSpace(email))
+                    return Json(new { status = "validation_error", message = "Ad Soyad ve Email zorunludur." });
+
+                bool emailExists =
+                    _context.FirmaCalisanlari.Any(c => c.Email == email) ||
+                    _context.Firmalar.Any(f => f.Email == email) ||
+                    _context.Bayiler.Any(b => b.Email == email);
+
+                if (emailExists)
+                    return Json(new { status = "email_exists", message = "Bu e-posta adresi zaten kullanılıyor." });
+
+                var rol = _context.Roller.FirstOrDefault(r => r.Ad == "Calisan");
+                if (rol == null)
+                    return Json(new { status = "role_not_found", message = "Çalışan rolü tanımlı değil." });
+
+                var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId);
+                if (firma == null)
+                    return Json(new { status = "firma_not_found", message = "Firma bulunamadı." });
+
+                if (aktifMi && (!firma.AktifMi || firma.LisansBitisTarihi <= DateTime.Today))
+                    return Json(new { status = "firma_pasif", message = "Firma pasif veya lisansı bitmiş." });
+
+                // 1) Rastgele şifre
+                string randomPassword = SifreUretici.RastgeleSifreUret(10);
+
+                // 2) Login URL
+                string baseUrl = _configuration["Sistem:BaseUrl"] ?? "https://tentecrm.com.tr";
+                string loginUrl = $"{baseUrl}/{firma.SeoUrl}/Admin/Login";
+
+                // 3) Firma mailine bilgilendirme (best-effort)
+                if (!string.IsNullOrWhiteSpace(firma.Email))
+                    MailHelper.MailGonderDetay(firma.Email, "Yeni Çalışan Bilgisi",
+                        $"{adSoyad} adlı çalışan eklendi.\nEmail: {email}\nTelefon: {telefon}");
+
+                // 4) Çalışana mail – başarısızsa kaydetmeyelim
+                string body =
+                    $"Merhaba {adSoyad},\n\n" +
+                    $"TenteCRM hesabınız oluşturuldu.\n\n" +
+                    $"Giriş URL: {loginUrl}\n" +
+                    $"Kullanıcı Adı: {email}\n" +
+                    $"Şifreniz: {randomPassword}\n\n" +
+                    $"Giriş yaptıktan sonra lütfen şifrenizi değiştirin.";
+
+                var (ok, error) = MailHelper.MailGonderDetay(email, "TenteCRM Hesap Bilgileriniz", body);
+                if (!ok)
+                {
+                    _context.SuperAdminHataKayitlari.Add(new SuperAdminHataKaydi
+                    {
+                        KullaniciRol = HttpContext.Session.GetString("UserRole") ?? "SuperAdmin",
+                        KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "SuperAdmin",
+                        FirmaSeo = firma.SeoUrl,
+                        Url = HttpContext.Request?.Path.Value,
+                        Tarih = DateTime.Now,
+                        HataMesaji = "SMTP hata: " + (error ?? "-"),
+                        StackTrace = error
+                    });
+                    _context.SaveChanges();
+
+                    return Json(new { status = "mail_error", message = error ?? "E-posta gönderilemedi." });
+                }
+
+                // 5) Kaydet (HASH)
+                var calisan = new FirmaCalisani
+                {
+                    AdSoyad = adSoyad,
+                    Email = email,
+                    Telefon = telefon,
+                    Sifre = HashHelper.Hash(randomPassword),
+                    AktifMi = aktifMi,
+                    RolId = rol.Id,
+                    FirmaId = firmaId,
+                    LisansSuresiBitis = DateTime.Now.AddYears(1)
+                };
+
+                _context.FirmaCalisanlari.Add(calisan);
+                _context.SaveChanges();
+
+                return Json(new { status = "success" });
             }
-
-            // 5️⃣ Şifreyi hashle ve veritabanına kaydet
-            var calisan = new FirmaCalisani
+            catch (Exception ex)
             {
-                AdSoyad = form["AdSoyad"],
-                Email = email,
-                Telefon = form["Telefon"],
-                Sifre = HashHelper.Hash(randomPassword), // Hashlenmiş şifre
-                AktifMi = form["AktifMi"] == "on",
-                RolId = rol.Id,
-                FirmaId = firmaId,
-                LisansSuresiBitis = DateTime.Now.AddYears(1)
-            };
+                try
+                {
+                    _context.SuperAdminHataKayitlari.Add(new SuperAdminHataKaydi
+                    {
+                        KullaniciRol = HttpContext.Session.GetString("UserRole") ?? "SuperAdmin",
+                        KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "SuperAdmin",
+                        FirmaSeo = HttpContext.Session.GetString("FirmaSeoUrl") ?? "superadmin",
+                        Url = HttpContext.Request?.Path.Value,
+                        Tarih = DateTime.Now,
+                        HataMesaji = ex.Message,
+                        StackTrace = ex.ToString()
+                    });
+                    _context.SaveChanges();
+                }
+                catch { /* yut */ }
 
-            _context.FirmaCalisanlari.Add(calisan);
-            _context.SaveChanges();
-
-            return Json(new { status = "success" });
+                return Json(new { status = "error", message = "Çalışan eklenirken bir hata oluştu." });
+            }
         }
 
 
@@ -643,7 +742,7 @@ namespace FirmaDasboardDemo.Controllers
             return Ok(new { status = "success" });
         }
 
-
+       
 
     }
 }

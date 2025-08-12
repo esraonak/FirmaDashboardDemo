@@ -16,8 +16,21 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.1/dist/aos.css" />
     <script src="https://unpkg.com/@@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 
-
     <style>
+        :root {
+            --container-max: 1200px;
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        img, video {
+            max-width: 100%;
+            height: auto;
+            display: block
+        }
+
         body {
             margin: 0;
             font-family: 'Segoe UI', sans-serif;
@@ -27,6 +40,12 @@
 
         html {
             scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: var(--container-max);
+            margin: 0 auto;
+            padding: 0 20px;
         }
 
         .hero {
@@ -39,6 +58,7 @@
             .hero h1 {
                 font-size: 48px;
                 margin-bottom: 20px;
+                line-height: 1.15;
             }
 
             .hero p {
@@ -46,21 +66,28 @@
                 margin-bottom: 30px;
             }
 
-            .hero .cta-buttons button {
-                background: white;
-                color: #00a8ff;
-                border: none;
-                padding: 15px 25px;
-                margin: 10px;
-                font-size: 16px;
-                border-radius: 10px;
-                cursor: pointer;
-                transition: all 0.3s ease;
+            .hero .cta-buttons {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                flex-wrap: wrap;
             }
 
-                .hero .cta-buttons button:hover {
-                    background: #f0f0f0;
+                .hero .cta-buttons button {
+                    background: white;
+                    color: #00a8ff;
+                    border: none;
+                    padding: 15px 25px;
+                    margin: 10px 6px;
+                    font-size: 16px;
+                    border-radius: 10px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
                 }
+
+                    .hero .cta-buttons button:hover {
+                        background: #f0f0f0;
+                    }
 
         .section {
             padding: 80px 20px;
@@ -76,10 +103,9 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 30px;
-            max-width: 1200px;
+            max-width: var(--container-max);
             margin: 0 auto;
             padding: 0 20px;
-            box-sizing: border-box;
         }
 
         .feature {
@@ -99,11 +125,6 @@
         .features-section {
             background-color: #f4f6f8;
         }
-
-            .features-section .container {
-                max-width: 1200px;
-                margin: auto;
-            }
 
             .features-section h2 {
                 font-weight: 700;
@@ -171,6 +192,9 @@
                 text-decoration: none;
                 font-size: 18px;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                display: inline-flex;
+                align-items: center;
+                gap: .5rem;
             }
 
         .alert {
@@ -189,20 +213,90 @@
             background-color: #fdecea;
             color: #d32f2f;
         }
-    </style>
 
+        /* ------ Responsive dokunuşlar ------ */
+        @@media (max-width: 992px) {
+            .hero
+
+        {
+            padding: 80px 20px;
+        }
+
+        .hero h1 {
+            font-size: 40px;
+        }
+
+        .section h2 {
+            font-size: 32px;
+        }
+
+        }
+        @@media (max-width: 768px) {
+            .hero h1
+
+        {
+            font-size: 34px;
+        }
+
+        .hero p {
+            font-size: 18px;
+        }
+
+        .hero .cta-buttons button {
+            width: 100%;
+            max-width: 340px;
+        }
+
+        .form-wrapper {
+            padding: 28px;
+        }
+
+        }
+        @@media (max-width: 576px) {
+            .hero
+
+        {
+            padding: 60px 16px;
+        }
+
+        .hero h1 {
+            font-size: 28px;
+        }
+
+        .hero p {
+            font-size: 16px;
+        }
+
+        .section {
+            padding: 56px 16px;
+        }
+
+            .section h2 {
+                font-size: 26px;
+            }
+
+        .whatsapp-button {
+            bottom: 16px;
+            right: 16px;
+        }
+
+        footer p {
+            line-height: 1.6;
+        }
+
+        }
+    </style>
 </head>
 <body>
 
-	
     <!-- Hero -->
     <section class="hero" data-aos="fade-up"
              style="background: linear-gradient(to right, #008dd0, #00b7a0); color: white; padding: 20px 20px 40px 20px;">
 
-        <!-- Logo (daha büyük, daha az boşluklu) -->
+        <!-- Logo -->
         <div style="max-width: 250px; margin: 0 auto 10px auto; text-align: center;">
             <img src="~/tentecrmlogo/chatgpt image 31 tem 2025 17_59_58.png"
-                 alt="TenteCRM Logo"
+                 alt="TenteCRM Logo" loading="lazy"
                  style="max-width: 100%; height: auto;" />
         </div>
 
@@ -234,7 +328,6 @@
         </lottie-player>
     </section>
 
-
     <!-- Neden TenteCRM? -->
     <section class="section features-section" data-aos="fade-up">
         <div class="container">
@@ -264,7 +357,7 @@
         </div>
     </section>
 
-    <!--  TenteCRM Nasıl Çalışır?-->
+    <!-- TenteCRM Nasıl Çalışır? -->
     <div style="height: 40px; background: transparent;"></div>
     <section class="section" style="background: #eef3f5;" data-aos="fade-up">
         <div class="container" style="text-align: center;">
@@ -273,33 +366,34 @@
                 Aşağıdaki örnekte bir bayinin kendi verilerini girerek anında teklif almasını izleyin.
             </p>
 
-            <video autoplay muted loop playsinline style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+            <video autoplay muted loop playsinline
+                   style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
                 <source src="/demo/demo.mp4" type="video/mp4" />
                 Tarayıcınız video etiketini desteklemiyor.
             </video>
         </div>
     </section>
 
-    <!--  Sosyal Kanıt: Referanslar-->
+    <!-- Sosyal Kanıt -->
     <section class="section" data-aos="fade-up">
         <div class="container">
             <h2>Firmaların Güvendiği Sistem</h2>
 
             <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 40px; margin-top: 40px;">
-                <img src="https://via.placeholder.com/120x60?text=Firma+1" alt="Firma 1" data-aos="zoom-in" />
-                <img src="https://via.placeholder.com/120x60?text=Firma+2" alt="Firma 2" data-aos="zoom-in" data-aos-delay="100" />
-                <img src="https://via.placeholder.com/120x60?text=Firma+3" alt="Firma 3" data-aos="zoom-in" data-aos-delay="200" />
-                <img src="https://via.placeholder.com/120x60?text=Firma+4" alt="Firma 4" data-aos="zoom-in" data-aos-delay="300" />
+                <img src="https://via.placeholder.com/120x60?text=Firma+1" alt="Firma 1" data-aos="zoom-in" loading="lazy" />
+                <img src="https://via.placeholder.com/120x60?text=Firma+2" alt="Firma 2" data-aos="zoom-in" data-aos-delay="100" loading="lazy" />
+                <img src="https://via.placeholder.com/120x60?text=Firma+3" alt="Firma 3" data-aos="zoom-in" data-aos-delay="200" loading="lazy" />
+                <img src="https://via.placeholder.com/120x60?text=Firma+4" alt="Firma 4" data-aos="zoom-in" data-aos-delay="300" loading="lazy" />
             </div>
 
-            <div style="max-width: 700px; margin: 50px auto 0; background: #f8f8f8; padding: 30px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);">
+            <div class="container" style="max-width: 700px; margin: 50px auto 0; background: #f8f8f8; padding: 30px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.05);">
                 <p style="font-size: 18px; font-style: italic;">"TenteCRM sayesinde bayi süreçlerimizi %70 hızlandırdık. Excel ve WhatsApp'tan tamamen kurtulduk!"</p>
                 <p style="font-weight: bold; margin-top: 10px;">— Burak Yılmaz, ABC Tente</p>
             </div>
         </div>
     </section>
 
-    <!-- Harekete Geçirici Alan -->
+    <!-- CTA -->
     <section class="section" style="background: linear-gradient(135deg, #00b894, #00cec9); color: white;" data-aos="fade-up">
         <div class="container" style="text-align: center;">
             <h2 style="margin-bottom: 20px;">Siz de TenteCRM ile bayilerinizi dijitalleştirin</h2>
@@ -311,7 +405,6 @@
             </button>
         </div>
     </section>
-
 
     <!-- Demo Talep Formu -->
     <section class="section form-section" id="demo-form" data-aos="fade-up">
@@ -337,29 +430,27 @@
                 <textarea name="Not" placeholder="Mesajınız..." rows="4"></textarea>
                 <button type="submit">Demo Talep Et</button>
             </form>
-
         </div>
     </section>
+
     <!-- footer -->
     <footer style="background: #1e272e; color: white; padding: 40px 20px; text-align: center;">
         <p style="margin: 0; font-size: 14px;">&copy; @DateTime.Now.Year TenteCRM. Tüm hakları saklıdır.</p>
         <p style="margin-top: 10px;">
-            <a href="https://www.instagram.com/tentecrm" target="_blank" style="color: #ccc; margin: 0 10px;">Instagram</a>
-            <a href="https://www.facebook.com/tentecrm" target="_blank" style="color: #ccc; margin: 0 10px;">Facebook</a>
-            <a href="https://www.twitter.com/tentecrm" target="_blank" style="color: #ccc; margin: 0 10px;">Twitter</a>
+            <a href="https://www.instagram.com/tentecrm" target="_blank" rel="noopener" style="color: #ccc; margin: 0 10px;">Instagram</a>
+            <a href="https://www.facebook.com/tentecrm" target="_blank" rel="noopener" style="color: #ccc; margin: 0 10px;">Facebook</a>
+            <a href="https://www.twitter.com/tentecrm" target="_blank" rel="noopener" style="color: #ccc; margin: 0 10px;">Twitter</a>
         </p>
     </footer>
 
     <!-- WhatsApp Destek Butonu -->
     <div class="whatsapp-button">
-        <a href="https://wa.me/905524025752" target="_blank">
+        <a href="https://wa.me/905524025752" target="_blank" rel="noopener">
             <i class="fab fa-whatsapp"></i> Canlı Destek
         </a>
     </div>
-  
+
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    <script>
-        AOS.init();
-    </script>
+    <script> AOS.init(); </script>
 </body>
 </html>

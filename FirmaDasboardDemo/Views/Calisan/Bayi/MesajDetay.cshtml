@@ -9,52 +9,69 @@
     var seo = ViewBag.FirmaSeo as string ?? "";
 }
 
-<style>
-    .msg-container {
-        max-height: 500px;
-        overflow-y: auto;
-        padding: 15px;
-        background: #f9f9f9;
-        border: 1px solid #ddd;
-        margin-bottom: 20px;
-    }
+@section Styles {
+    <style>
+        .msg-container {
+            /* Ekrana göre dinamik yükseklik */
+            max-height: min(60vh, 600px);
+            overflow-y: auto;
+            padding: 15px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
 
-    .msg-left {
-        text-align: left;
-        background-color: #e2f0ff;
-        padding: 10px;
-        border-radius: 10px;
-        margin: 5px 0;
-        max-width: 70%;
-    }
+        .msg-left, .msg-right {
+            background-color: #e2f0ff;
+            padding: 10px;
+            border-radius: 10px;
+            margin: 5px 0;
+            max-width: 70%;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
 
-    .msg-right {
-        text-align: right;
-        background-color: #d4edda;
-        padding: 10px;
-        border-radius: 10px;
-        margin: 5px 0 5px auto;
-        max-width: 70%;
-    }
+        .msg-right {
+            background-color: #d4edda;
+            margin-left: auto;
+            text-align: left;
+        }
 
-    .msg-meta {
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-    }
-</style>
+        .msg-meta {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Mesaj içerisindeki görseller taşmasın */
+        .msg-left img, .msg-right img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Küçük ekranlarda baloncukları tam genişlik yap */
+        @@media (max-width:576px) {
+            .msg-left, .msg-right
+
+        {
+            max-width: 100%;
+            padding: 8px;
+        }
+
+        }
+
+        /* Bootstrap 4'te gap utility yok, bu sayfa özel minik destek */
+        .gap-2 {
+            gap: .5rem;
+        }
+    </style>
+}
 
 @functions {
     List<HucreDegeri> ParseJson(string json)
     {
-        try
-        {
-            return JsonConvert.DeserializeObject<List<HucreDegeri>>(json) ?? new List<HucreDegeri>();
-        }
-        catch
-        {
-            return new List<HucreDegeri>();
-        }
+        try { return JsonConvert.DeserializeObject<List<HucreDegeri>>(json) ?? new List<HucreDegeri>(); }
+        catch { return new List<HucreDegeri>(); }
     }
 
     // Aynı satıra ait olanları grup olarak döndür
@@ -69,12 +86,12 @@
 
 <div class="card">
     <div class="card-header bg-info text-white">
-        <h5>Mesaj Detay - @Model.Bayi?.Ad (@Model.Urun?.Ad)</h5>
+        <h5 class="mb-0">Mesaj Detay - @Model.Bayi?.Ad (@Model.Urun?.Ad)</h5>
     </div>
 
     <div class="card-body">
 
-        @* Hesaplama Detayı *@
+        @* 🧮 Hesaplama Detayı *@
         @if (Model.MesajTuru == FirmaDasboardDemo.Enums.BayiMesajTuru.HesaplamaSonucu)
         {
             <div class="mb-4 border rounded p-3 bg-light">
@@ -87,41 +104,45 @@
 
                 <div class="mb-3">
                     <strong>Görünen Hücreler:</strong>
-                    <table class="table table-sm table-bordered mt-1">
-                        <tbody>
-                            @foreach (var grup in gorunen)
-                            {
-                                <tr>
-                                    @foreach (var hucre in grup.Value)
-                                    {
-                                        <td>@hucre.Deger</td>
-                                    }
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mt-1 nowrap" style="width:100%">
+                            <tbody>
+                                @foreach (var grup in gorunen)
+                                {
+                                    <tr>
+                                        @foreach (var hucre in grup.Value)
+                                        {
+                                            <td>@hucre.Deger</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <div class="mb-3">
                     <strong>Satış Fiyatları:</strong>
-                    <table class="table table-sm table-bordered mt-1">
-                        <tbody>
-                            @foreach (var grup in fiyatlar)
-                            {
-                                <tr>
-                                    @foreach (var hucre in grup.Value)
-                                    {
-                                        <td>@hucre.Deger</td>
-                                    }
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mt-1 nowrap" style="width:100%">
+                            <tbody>
+                                @foreach (var grup in fiyatlar)
+                                {
+                                    <tr>
+                                        @foreach (var hucre in grup.Value)
+                                        {
+                                            <td>@hucre.Deger</td>
+                                        }
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         }
 
-        @* Mesajlaşma Geçmişi *@
+        @* 💬 Mesajlaşma Geçmişi *@
         <div class="msg-container">
             @foreach (var m in Model.Mesajlar.OrderBy(x => x.Tarih))
             {
@@ -142,9 +163,8 @@
             }
         </div>
 
-        @* Cevap Formu *@
+        @* ✍️ Cevap Formu *@
         <form method="post" action="/@seo/Admin/Bayi/MesajCevapla">
-
             <input type="hidden" name="MesajId" value="@Model.Id" />
 
             <div class="form-group mb-3">
@@ -163,13 +183,10 @@
                 </div>
             }
 
-            <div class="d-flex gap-2">
-                <button type="submit"
-                        class="btn btn-success"
-                @(ticketKapaliMi ? "disabled" : "")>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-success" @(ticketKapaliMi ? "disabled" : "")>
                     ✔ Yanıtla
                 </button>
-
                 <a href="/@seo/Admin/Bayi/Mesajlar" class="btn btn-secondary">← Geri</a>
             </div>
         </form>
@@ -181,7 +198,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
 
     <script>
-        $(document).ready(function () {
+        $(function () {
         @if (TempData["Basari"] != null)
         {
             <text>toastr.success("@TempData["Basari"]");</text>

@@ -10,10 +10,14 @@ namespace FirmaDashboardDemo.Controllers
     public class BayiController : BaseAdminController
     {
         private readonly ApplicationDbContext _context;
-
-        public BayiController(ApplicationDbContext context) : base(context)
+        private readonly IConfiguration _configuration;
+        public BayiController(
+         ApplicationDbContext context,
+         IConfiguration configuration
+     ) : base(context)
         {
             _context = context;
+            _configuration = configuration;
         }
 
         private bool FirmaSeoUrlGecerliMi(string firmaSeoUrl)
@@ -73,83 +77,110 @@ namespace FirmaDashboardDemo.Controllers
         [HttpPost("{firmaSeoUrl}/Admin/Bayi/AddBayi")]
         public IActionResult AddBayi(string firmaSeoUrl, Bayi model)
         {
-            if (!FirmaSeoUrlGecerliMi(firmaSeoUrl))
-                return Unauthorized();
-
-            int? calisanId = HttpContext.Session.GetInt32("CalisanId");
-            if (calisanId == null)
-                return Redirect("/" + firmaSeoUrl + "/Admin/Login");
-
-            int? firmaId = HttpContext.Session.GetInt32("FirmaId");
-            if (firmaId == null)
-                return Unauthorized();
-
-            var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
-            if (firma == null)
-                return BadRequest(new { status = "firma_not_found" });
-
-            // ✅ Lisans bayi limiti kontrolü
-            int mevcutBayiSayisi = _context.BayiFirmalari.Count(bf => bf.FirmaId == firma.Id);
-            if (mevcutBayiSayisi >= firma.MaxBayiSayisi)
-                return Json(new { status = "max_bayi_limit" });
-
-            // ✅ E-posta çakışma kontrolü
-            bool emailExists =
-                _context.Bayiler.Any(b => b.Email == model.Email && b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
-                _context.FirmaCalisanlari.Any(c => c.Email == model.Email && c.FirmaId == firma.Id) ||
-                firma.Email == model.Email;
-
-            if (emailExists)
-                return Json(new { status = "email_exists" });
-
-            // ➕ Bayi rolü
-            var bayiRol = _context.Roller.FirstOrDefault(r => r.Ad == "Bayi");
-            if (bayiRol == null)
-                return BadRequest(new { status = "role_not_found" });
-
-            // 🔐 Şifre üret
-            string plainPassword = SifreUretici.RastgeleSifreUret(); // Harf + rakam 8 karakter
-            string loginUrl = $"{Request.Scheme}://{Request.Host}/{firma.SeoUrl}/Bayi/Login";
-
-            // 📧 Mail gönder
-            bool mailGittiMi = MailHelper.MailGonder(
-                model.Email,
-                "TenteCRM Bayi Giriş Bilgileri",
-                $@"Merhaba {model.Ad},
-
-TenteCRM bayi paneline giriş bilgileriniz:
-
-🔗 Giriş Adresi: {loginUrl}
-📧 E-posta: {model.Email}
-🔐 Şifre: {plainPassword}
-
-Giriş yaptıktan sonra şifrenizi değiştirmeniz önerilir.
-İyi çalışmalar."
-            );
-
-            if (!mailGittiMi)
-                return BadRequest(new { status = "email_send_fail" });
-
-            // 🧂 Şifreyi hashleyip DB'ye kaydet
-            string hashedPassword = HashHelper.Hash(plainPassword);
-            model.Sifre = hashedPassword;
-            model.AktifMi = true;
-            model.RolId = bayiRol.Id;
-
-            // 💾 Veritabanına ekle
-            _context.Bayiler.Add(model);
-            _context.SaveChanges();
-
-            _context.BayiFirmalari.Add(new BayiFirma
+            try
             {
-                BayiId = model.Id,
-                FirmaId = firma.Id
-            });
-            _context.SaveChanges();
+                // 0) Oturum ve routing doğrulama
+                int? calisanId = HttpContext.Session.GetInt32("CalisanId");
+                int? firmaId = HttpContext.Session.GetInt32("FirmaId");
+                if (calisanId == null || firmaId == null)
+                    return Redirect($"/{firmaSeoUrl}/Admin/Login");
 
-            return Json(new { status = "success" });
+                var firma = _context.Firmalar.FirstOrDefault(f => f.Id == firmaId.Value);
+                if (firma == null || !string.Equals(firma.SeoUrl, firmaSeoUrl, StringComparison.OrdinalIgnoreCase))
+                    return BadRequest(new { status = "firma_not_found" });
+
+                // 1) Lisans bayi limiti
+                int mevcutBayiSayisi = _context.BayiFirmalari.Count(bf => bf.FirmaId == firma.Id);
+                if (mevcutBayiSayisi >= firma.MaxBayiSayisi)
+                    return Json(new { status = "max_bayi_limit" });
+
+                // 2) Email tekillik (firma scope’unda)
+                bool emailExists =
+                    _context.Bayiler.Any(b => b.Email == model.Email && b.BayiFirmalari.Any(bf => bf.FirmaId == firma.Id)) ||
+                    _context.FirmaCalisanlari.Any(c => c.Email == model.Email && c.FirmaId == firma.Id) ||
+                    string.Equals(firma.Email, model.Email, StringComparison.OrdinalIgnoreCase);
+
+                if (emailExists)
+                    return Json(new { status = "email_exists" });
+
+                // 3) Rol
+                var bayiRol = _context.Roller.FirstOrDefault(r => r.Ad == "Bayi");
+                if (bayiRol == null)
+                    return BadRequest(new { status = "role_not_found" });
+
+                // 4) Rastgele şifre + login URL (BaseUrl appsettings/secrets/env)
+                string plainPassword = SifreUretici.RastgeleSifreUret(10);
+                string baseUrl = _configuration["Sistem:BaseUrl"] ?? "https://tentecrm.com.tr";
+                string loginUrl = $"{baseUrl}/{firma.SeoUrl}/Bayi/Login";
+
+                // 5) Bayiye e-posta (başarısızsa kayıt yapma)
+                string konu = "TenteCRM Bayi Giriş Bilgileri";
+                string icerik =
+                    $"Merhaba {model.Ad},\n\n" +
+                    $"TenteCRM bayi paneline giriş bilgileriniz:\n\n" +
+                    $"Giriş Adresi: {loginUrl}\n" +
+                    $"E-posta: {model.Email}\n" +
+                    $"Şifre: {plainPassword}\n\n" +
+                    $"Giriş yaptıktan sonra şifrenizi değiştirmenizi öneririz.\nİyi çalışmalar.";
+
+                var (ok, err) = MailHelper.MailGonderDetay(model.Email, konu, icerik);
+                if (!ok)
+                {
+                    // SMTP hatasını logla
+                    _context.SuperAdminHataKayitlari.Add(new SuperAdminHataKaydi
+                    {
+                        KullaniciRol = HttpContext.Session.GetString("UserRole") ?? "Calisan",
+                        KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "Bilinmiyor",
+                        FirmaSeo = firma.SeoUrl,
+                        Url = HttpContext.Request?.Path.Value,
+                        Tarih = DateTime.Now,
+                        HataMesaji = "SMTP hata: " + (err ?? "-"),
+                        StackTrace = err
+                    });
+                    _context.SaveChanges();
+
+                    return Json(new { status = "email_send_fail", message = err ?? "E-posta gönderilemedi." });
+                }
+
+                // 6) Şifreyi hash’le, bayi kaydı + ilişki
+                model.Sifre = HashHelper.Hash(plainPassword);
+                model.AktifMi = true;
+                model.RolId = bayiRol.Id;
+
+                _context.Bayiler.Add(model);
+                _context.SaveChanges();
+
+                _context.BayiFirmalari.Add(new BayiFirma
+                {
+                    BayiId = model.Id,
+                    FirmaId = firma.Id
+                });
+                _context.SaveChanges();
+
+                return Json(new { status = "success" });
+            }
+            catch (Exception ex)
+            {
+                // Genel log
+                try
+                {
+                    _context.SuperAdminHataKayitlari.Add(new SuperAdminHataKaydi
+                    {
+                        KullaniciRol = HttpContext.Session.GetString("UserRole") ?? "Calisan",
+                        KullaniciAdi = HttpContext.Session.GetString("UserAd") ?? "Bilinmiyor",
+                        FirmaSeo = firmaSeoUrl,
+                        Url = HttpContext.Request?.Path.Value,
+                        Tarih = DateTime.Now,
+                        HataMesaji = ex.Message,
+                        StackTrace = ex.ToString()
+                    });
+                    _context.SaveChanges();
+                }
+                catch { /* yut */ }
+
+                return Json(new { status = "error", message = "Bayi eklenirken beklenmeyen bir hata oluştu." });
+            }
         }
-
 
 
 

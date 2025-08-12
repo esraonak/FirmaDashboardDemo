@@ -27,6 +27,7 @@ namespace FirmaDasboardDemo.Data
         public BayiMesajTuru MesajTuru { get; set; }
         public DbSet<BayiHesaplamaKaydi> BayiHesaplamaKayitlari { get; set; }
         public DbSet<MesajSatiri> MesajSatirlari { get; set; }
+        public DbSet<SuperAdminHataKaydi> SuperAdminHataKayitlari { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

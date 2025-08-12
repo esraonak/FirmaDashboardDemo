@@ -3,54 +3,83 @@
     Layout = "~/Views/Shared/_SuperAdminLayout.cshtml";
 }
 
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">Çalışan Listesi</h3>
-    </div>
-    <div class="card-body">
-        <table id="calisanTablosu" class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Ad Soyad</th>
-                    <th>Email</th>
-                    <th>Telefon</th>
-                    <th>Firma</th>
-                    <th>Aktif</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-        </table>
+@section Styles {
+    <!-- DataTables Bootstrap4 + Responsive -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css" />
+    <!-- Toastr -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+    <style>
+        /* Mobilde tabloda kayma olmasın */
+        #calisanTablosu{ width:100%!important; }
+        /* Küçük ekranlarda modal input aralıkları */
+        .form-group { margin-bottom: .75rem; }
+    </style>
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h3 class="card-title mb-0">Çalışan Listesi</h3>
+                    <!-- İstersen buraya “+ Yeni Çalışan” butonu ekleyebilirsin -->
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="calisanTablosu" class="table table-bordered table-striped table-hover nowrap" style="width:100%">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Ad Soyad</th>
+                                    <th>Email</th>
+                                    <th>Telefon</th>
+                                    <th>Firma</th>
+                                    <th>Aktif</th>
+                                    <th>İşlem</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- ✅ Düzenleme Modal -->
-<div class="modal fade" id="calisanDuzenleModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<!-- ✅ Düzenleme Modal (responsive) -->
+<div class="modal fade" id="calisanDuzenleModal" tabindex="-1" role="dialog" aria-labelledby="calisanDuzenleLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Çalışan Düzenle</h5>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <div class="modal-header py-2">
+                <h5 class="modal-title" id="calisanDuzenleLabel">Çalışan Düzenle</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="duzenleId">
-                <div class="form-group">
-                    <label>Ad Soyad</label>
-                    <input type="text" id="duzenleAd" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label>Email</label>
-                    <input type="email" id="duzenleEmail" class="form-control" />
-                </div>
-                <div class="form-group">
-                    <label>Telefon</label>
-                    <input type="text" id="duzenleTelefon" class="form-control" />
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" id="duzenleAktif">
-                    <label class="form-check-label" for="duzenleAktif">Aktif mi?</label>
+                <div class="form-row">
+                    <div class="form-group col-12 col-md-6">
+                        <label for="duzenleAd">Ad Soyad</label>
+                        <input type="text" id="duzenleAd" class="form-control" />
+                    </div>
+                    <div class="form-group col-12 col-md-6">
+                        <label for="duzenleEmail">Email</label>
+                        <input type="email" id="duzenleEmail" class="form-control" />
+                    </div>
+                    <div class="form-group col-12 col-md-6">
+                        <label for="duzenleTelefon">Telefon</label>
+                        <input type="text" id="duzenleTelefon" class="form-control" />
+                    </div>
+                    <div class="form-group col-12 col-md-6 d-flex align-items-center">
+                        <div class="form-check mt-3 mt-md-0">
+                            <input type="checkbox" class="form-check-input" id="duzenleAktif">
+                            <label class="form-check-label" for="duzenleAktif">Aktif mi?</label>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer py-2">
                 <button class="btn btn-primary" onclick="calisanGuncelle()">Güncelle</button>
                 <button class="btn btn-secondary" data-dismiss="modal">İptal</button>
             </div>
@@ -59,60 +88,85 @@
 </div>
 
 @section Scripts {
-    <!-- Gerekli kütüphaneler -->
+    <!-- SweetAlert2 + Toastr -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
+    <!-- DataTables + Bootstrap4 + Responsive -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
+
     <script>
-        // toastr ayarları (isteğe bağlı)
+        // toastr ayarları
         toastr.options = {
-            "closeButton": true,
-            "progressBar": true,
-            "positionClass": "toast-bottom-right",
-            "timeOut": "3000"
+            closeButton: true,
+            progressBar: true,
+            positionClass: "toast-bottom-right",
+            timeOut: "3000"
         };
 
         $(function () {
             $('#calisanTablosu').DataTable({
-                ajax: {
-                    url: '/SuperAdmin/GetCalisanlar',
-                    dataSrc: ''
+                ajax: { url: '/SuperAdmin/GetCalisanlar', dataSrc: '' },
+                responsive: true,
+                autoWidth: false,
+                deferRender: true,
+                pageLength: 10,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                language: {
+                    url: 'https://cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json'
                 },
                 columns: [
-                    { data: 'adSoyad' },
-                    { data: 'email' },
-                    { data: 'telefon' },
-                    { data: 'firmaAd' },
+                    { data: 'adSoyad', responsivePriority: 1 },
+                    { data: 'email', responsivePriority: 3 },
+                    { data: 'telefon', responsivePriority: 4 },
+                    { data: 'firmaAd', responsivePriority: 2 },
                     {
                         data: 'aktifMi',
                         render: function (data) {
-                            return data ? 'Evet' : 'Hayır';
-                        }
+                            return data ? '<span class="badge badge-success">Evet</span>'
+                                        : '<span class="badge badge-secondary">Hayır</span>';
+                        },
+                        className: 'text-center',
+                        width: '80px'
                     },
                     {
                         data: 'id',
                         render: function (id) {
                             return `
-                                <button class="btn btn-warning btn-sm" onclick="calisanDuzenle(${id})">Düzenle</button>
-                                <button class="btn btn-danger btn-sm" onclick="calisanSil(${id})">Sil</button>
-                            `;
+                                <div class="btn-group btn-group-sm" role="group" aria-label="İşlemler">
+                                    <button class="btn btn-warning" onclick="calisanDuzenle(${id})">
+                                        <i class="fas fa-edit mr-1"></i>Düzenle
+                                    </button>
+                                    <button class="btn btn-danger" onclick="calisanSil(${id})">
+                                        <i class="fas fa-trash-alt mr-1"></i>Sil
+                                    </button>
+                                </div>`;
                         },
                         orderable: false,
-                        searchable: false
+                        searchable: false,
+                        className: 'text-nowrap',
+                        responsivePriority: 1
                     }
-                ]
+                ],
+                order: [] // varsayılan sıralama yok
             });
         });
 
         // ✏️ Düzenleme verilerini modal'a doldur
         function calisanDuzenle(id) {
             $.get('/SuperAdmin/CalisanGetir', { id: id }, function (data) {
+                if (!data) { toastr.error("Kayıt bulunamadı."); return; }
                 $('#duzenleId').val(data.id);
                 $('#duzenleAd').val(data.adSoyad);
                 $('#duzenleEmail').val(data.email);
                 $('#duzenleTelefon').val(data.telefon);
                 $('#duzenleAktif').prop('checked', data.aktifMi);
                 $('#calisanDuzenleModal').modal('show');
+            }).fail(function () {
+                toastr.error("Kayıt alınamadı.");
             });
         }
 
@@ -127,19 +181,19 @@
             };
 
             $.post('/SuperAdmin/CalisanGuncelle', model, function (res) {
-                if (res.success) {
+                if (res && res.success) {
                     $('#calisanDuzenleModal').modal('hide');
-                    $('#calisanTablosu').DataTable().ajax.reload();
+                    $('#calisanTablosu').DataTable().ajax.reload(null, false);
                     toastr.success("Çalışan başarıyla güncellendi.");
                 } else {
-                    toastr.error("Güncelleme başarısız.");
+                    toastr.error(res && res.message ? res.message : "Güncelleme başarısız.");
                 }
             }).fail(function () {
                 toastr.error("Sunucu hatası oluştu.");
             });
         }
 
-        // ❌ Silme işlemi (pasif yapma) SweetAlert + Toastr
+        // ❌ Silme (pasif yapma) SweetAlert + Toastr
         function calisanSil(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -153,11 +207,11 @@
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.post('/SuperAdmin/CalisanPasifYap', { id: id }, function (res) {
-                        if (res.success) {
-                            $('#calisanTablosu').DataTable().ajax.reload();
+                        if (res && res.success) {
+                            $('#calisanTablosu').DataTable().ajax.reload(null, false);
                             toastr.success("Çalışan pasif yapıldı.");
                         } else {
-                            toastr.error("İşlem başarısız.");
+                            toastr.error(res && res.message ? res.message : "İşlem başarısız.");
                         }
                     }).fail(function () {
                         toastr.error("Sunucu hatası oluştu.");
@@ -167,4 +221,3 @@
         }
     </script>
 }
-

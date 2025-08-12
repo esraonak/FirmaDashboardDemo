@@ -3,6 +3,46 @@
     Layout = "~/Views/Shared/_BayiLayout.cshtml";
 }
 
+@section Styles {
+    <style>
+        /* Kart içi boşluklar ve mobil uyum */
+        .card-header h5 {
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        /* Hesaplama özeti rozetleri taşmadan dizilsin */
+        #hesaplamaOzeti .badge {
+            display: inline-block;
+            margin-right: .35rem;
+            margin-bottom: .35rem;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        #ozetUrun, #ozetGorunen, #ozetGirilen, #ozetSatis {
+            word-break: break-word;
+        }
+
+        /* Mobilde textarea ve buton tam genişlik */
+        @@media (max-width: 576px) {
+            #mesaj
+
+        {
+            min-height: 160px;
+        }
+
+        .btn-responsive {
+            width: 100%;
+        }
+
+        }
+    </style>
+}
+
 <div class="card">
     <div class="card-header bg-info text-white">
         <h5 class="mb-0">Firma ile İletişim</h5>
@@ -13,18 +53,19 @@
         {
             <script>
                 $(function () {
-                    toastr.success('@TempData["Success"]');
+                    if (window.toastr) toastr.success('@TempData["Success"]');
+                    else alert('@TempData["Success"]');
                 });
             </script>
         }
 
         <!-- Hesaplama Özeti -->
         <div id="hesaplamaOzeti" class="alert alert-secondary d-none">
-            <h6><i class="fas fa-info-circle"></i> Hesaplama Özeti:</h6>
-            <div id="ozetUrun"></div>
-            <div id="ozetGorunen"></div>
+            <h6 class="mb-2"><i class="fas fa-info-circle"></i> Hesaplama Özeti:</h6>
+            <div id="ozetUrun" class="mb-2"></div>
+            <div id="ozetGorunen" class="mb-2"></div>
             <hr />
-            <div id="ozetGirilen"></div>
+            <div id="ozetGirilen" class="mb-2"></div>
             <hr />
             <div id="ozetSatis"></div>
         </div>
@@ -43,7 +84,7 @@
             <input type="hidden" id="GorunenHucreler" name="GorunenHucreler" value='@Html.Raw(Json.Serialize(Model.GorunenHucreler ?? new List<FirmaDasboardDemo.Dtos.HucreDegeri>()))' />
             <input type="hidden" id="SatisFiyatlari" name="SatisFiyatlari" value='@Html.Raw(Json.Serialize(Model.SatisFiyatlari ?? new List<FirmaDasboardDemo.Dtos.HucreDegeri>()))' />
 
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary btn-responsive">
                 <i class="fas fa-paper-plane"></i> Gönder
             </button>
         </form>
@@ -52,6 +93,18 @@
 
 @section Scripts {
     <script>
+        // toastr yoksa basit fallback
+        (function(){
+            if(!window.toastr){
+                window.toastr = {
+                    success: function(m){ alert(m); },
+                    error: function(m){ alert(m); },
+                    info: function(m){ alert(m); },
+                    warning: function(m){ alert(m); }
+                };
+            }
+        })();
+
         toastr.options = {
             closeButton: true,
             progressBar: true,
@@ -75,26 +128,27 @@
                     document.getElementById("hesaplamaOzeti").classList.remove("d-none");
 
                     document.getElementById("ozetUrun").innerHTML =
-                        `<p><b>Ürün:</b> ${mesaj.urunAdi || "Belirsiz"}</p>`;
+                        `<p class="mb-1"><b>Ürün:</b> ${mesaj.urunAdi || "Belirsiz"}</p>`;
 
                     document.getElementById("ozetGorunen").innerHTML =
                         "<b>Görünen Hücreler:</b><br/>" +
                         (mesaj.gorunenHucreler || []).map(h =>
-                            `<span class='badge badge-primary mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
-                        ).join('');
+                            `<span class='badge badge-primary'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join(' ');
 
                     document.getElementById("ozetGirilen").innerHTML =
                         "<b>Girilen Değerler:</b><br/>" +
                         (mesaj.girilenHucreler || []).map(h =>
-                            `<span class='badge badge-warning text-dark mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
-                        ).join('');
+                            `<span class='badge badge-warning text-dark'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join(' ');
 
                     document.getElementById("ozetSatis").innerHTML =
                         "<b>Hesaplanan Sonuçlar:</b><br/>" +
                         (mesaj.satisFiyatlari || []).map(h =>
-                            `<span class='badge badge-success mr-1 mb-1'>${h.hucreAdi} = ${h.deger}</span>`
-                        ).join('');
+                            `<span class='badge badge-success'>${h.hucreAdi} = ${h.deger}</span>`
+                        ).join(' ');
 
+                    // tek seferlik gösterim
                     localStorage.removeItem("bayiSonMesaj");
 
                 } catch (e) {

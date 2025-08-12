@@ -3,23 +3,40 @@
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 
     var seo = Context.Session.GetString("FirmaSeoUrl"); // 🔥 EKLE
-    
-
 }
+
 @if (string.IsNullOrEmpty(seo))
 {
     <script>
-        toastr.error("Firma bağlantısı geçersiz. Giriş sayfasına yönlendiriliyorsunuz.");
-      
-        window.location.href = "/Admin/Login";
+        (function () {
+            var msg = "Firma bağlantısı geçersiz. Giriş sayfasına yönlendiriliyorsunuz.";
+            if (window.toastr) toastr.error(msg); else alert(msg);
+            window.location.href = "/Admin/Login";
+        })();
     </script>
 }
 
 @section Styles {
+    <!-- DataTables core + Responsive CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+    <!-- Toastr CSS (layout'ta yoksa gerekir) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+
     <style>
         .action-buttons {
             display: flex;
             gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        /* DataTable tam genişlik ve kayma kontrolü */
+        #bayiTable {
+            width: 100% !important;
+        }
+
+        .modal .form-control {
+            font-size: .95rem;
         }
     </style>
 }
@@ -30,32 +47,34 @@
         <button class="btn btn-success btn-sm" data-toggle="modal" data-target="#addModal">Yeni Bayi Ekle</button>
     </div>
     <div class="card-body">
-        <table id="bayiTable" class="display nowrap" style="width:100%">
-            <thead>
-                <tr>
-                    <th>Ad</th>
-                    <th>Adres</th>
-                    <th>İl</th>
-                    <th>İlçe</th>
-                    <th>Email</th>
-                    <th>Telefon</th>
-                    <th>Aktif</th>
-                    <th>Giriş URL</th>
-                    <th>İşlem</th>
-                </tr>
-            </thead>
-        </table>
+        <div class="table-responsive">
+            <table id="bayiTable" class="display nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Ad</th>
+                        <th>Adres</th>
+                        <th>İl</th>
+                        <th>İlçe</th>
+                        <th>Email</th>
+                        <th>Telefon</th>
+                        <th>Aktif</th>
+                        <th>Giriş URL</th>
+                        <th>İşlem</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
     </div>
 </div>
 
 <!-- ✅ Bayi Ekleme Modalı -->
-<div class="modal fade" id="addModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="addModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <form id="addForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Yeni Bayi Ekle</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="addModalLabel">Yeni Bayi Ekle</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <input name="Ad" class="form-control mb-2" placeholder="Ad" required />
@@ -75,25 +94,41 @@
 </div>
 
 <!-- ✅ Bayi Güncelleme Modalı -->
-<div class="modal fade" id="editModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
             <form id="editForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">Bayi Düzenle</h5>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h5 class="modal-title" id="editModalLabel">Bayi Düzenle</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Kapat"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="Id" />
-                    <input name="Ad" class="form-control mb-2" placeholder="Ad" required />
-                    <input name="Adres" class="form-control mb-2" placeholder="Adres" />
-                    <input name="Il" class="form-control mb-2" placeholder="İl" />
-                    <input name="Ilce" class="form-control mb-2" placeholder="İlçe" />
-                    <input name="Email" type="email" class="form-control mb-2" placeholder="Email" required />
-                    <input name="Telefon" class="form-control mb-2" placeholder="Telefon" />
-                    <div class="form-check">
-                        <input type="checkbox" name="AktifMi" class="form-check-input" id="aktifCheck">
-                        <label class="form-check-label" for="aktifCheck">Aktif Mi</label>
+                    <div class="form-row">
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Ad" class="form-control" placeholder="Ad" required />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Email" type="email" class="form-control" placeholder="Email" required />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Telefon" class="form-control" placeholder="Telefon" />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Adres" class="form-control" placeholder="Adres" />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Il" class="form-control" placeholder="İl" />
+                        </div>
+                        <div class="form-group col-12 col-md-6">
+                            <input name="Ilce" class="form-control" placeholder="İlçe" />
+                        </div>
+                        <div class="form-group col-12 d-flex align-items-center">
+                            <div class="form-check mt-1">
+                                <input type="checkbox" name="AktifMi" class="form-check-input" id="aktifCheck">
+                                <label class="form-check-label" for="aktifCheck">Aktif Mi</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -106,113 +141,112 @@
 </div>
 
 @section Scripts {
+    <!-- SweetAlert2 + Toastr -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- DataTables core + Responsive JS -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+
     <script>
         var seo = '@seo';
+
+        // toastr ayarları
+        if (window.toastr) {
+            toastr.options = {
+                closeButton: true,
+                progressBar: true,
+                positionClass: "toast-bottom-right",
+                timeOut: "3000"
+            };
+        }
+
         $(document).ready(function () {
             const table = $('#bayiTable').DataTable({
-                ajax: {
-                    url: `/${seo}/Admin/Bayi/GetBayiler`,
-                    dataSrc: ''
-                },
-                       columns: [
-            { data: 'ad' },
-            { data: 'adres' },
-            { data: 'il' },
-            { data: 'ilce' },
-            { data: 'email' },
-            { data: 'telefon' },
-            {
-                data: 'aktifMi',
-                render: data => data ? 'Evet' : 'Hayır'
-            },
-            {
-                // ✅ Yeni sütun: Giriş URL
-                data: 'email', // veri önemli değil çünkü render override ediyoruz
-                render: function (data, type, row) {
-                    const baseUrl = window.location.origin;
-                    const loginUrl = `${baseUrl}/${seo}/Bayi/Login`;
-                    return `
-                        <div class="d-flex align-items-center">
-                            <input type="text" value="${loginUrl}" class="form-control form-control-sm mr-2" readonly style="width: 200px;" />
-                            <button class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('${loginUrl}')">
-                                <i class="fas fa-copy"></i>
-                            </button>
-                        </div>
-                    `;
-                },
-                orderable: false,
-                searchable: false
-            },
-            {
-                data: 'id',
-                render: id => `
-                    <div class="action-buttons">
-                        <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">Düzenle</button>
-                        <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">Sil</button>
-                    </div>
-                `,
-                orderable: false,
-                searchable: false
-            }
-        ]
-
-            });
-                    // ➕ Yeni bayi ekle
-               $('#addForm').submit(function (e) {
-            e.preventDefault();
-
-            $.post(`/${seo}/Admin/Bayi/AddBayi`, $(this).serialize(), function (res) {
-                if (res.status === "success") {
-                    $('#addModal').modal('hide');
-                    table.ajax.reload();
-                    toastr.success("✅ Bayi başarıyla eklendi.");
-                } else if (res.status === "email_exists") {
-                    toastr.error("❌ Bu e-posta zaten kayıtlı.");
-                } else if (res.status === "max_bayi_limit") {
-                    toastr.error("⚠️ Maksimum bayi sayısına ulaşıldı. Yeni bayi ekleyemezsiniz.");
-                } else {
-                    toastr.error("❌ Bir hata oluştu: " + (res.message || res.status));
-                }
-            }).fail(function () {
-                toastr.error("🚫 Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.");
-            });
-        });
-
-
-
-
-
-                    // ✅ Bayi sil — SweetAlert2 ile
-        $('#bayiTable').on('click', '.delete-btn', function () {
-            const id = $(this).data('id');
-
-            Swal.fire({
-                title: 'Emin misiniz?',
-                text: "Bayiyi silmek istediğinize emin misiniz?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Evet, Sil',
-                cancelButtonText: 'Vazgeç'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.post(`/${seo}/Admin/Bayi/DeleteBayi`, { id }, function (res) {
-                        if (res.status === "deleted") {
-                            Swal.fire("Silindi", "Bayi başarıyla silindi.", "success");
-                            $('#bayiTable').DataTable().ajax.reload();
-                        } else {
-                            Swal.fire("Hata", "Bayi silinemedi.", "error");
+                ajax: { url: `/${seo}/Admin/Bayi/GetBayiler`, dataSrc: '' },
+                responsive: true,
+                autoWidth: false,
+                deferRender: true,
+                pageLength: 10,
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json' },
+                columns: [
+                    { data: 'ad',       responsivePriority: 1 },
+                    { data: 'adres',    responsivePriority: 5 },
+                    { data: 'il',       responsivePriority: 6 },
+                    { data: 'ilce',     responsivePriority: 7 },
+                    { data: 'email',    responsivePriority: 2 },
+                    { data: 'telefon',  responsivePriority: 8 },
+                    {
+                        data: 'aktifMi',
+                        className: 'text-center',
+                        width: '80px',
+                        render: data => data
+                            ? '<span class="badge badge-success">Evet</span>'
+                            : '<span class="badge badge-secondary">Hayır</span>'
+                    },
+                    {
+                        // ✅ Giriş URL
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-nowrap',
+                        render: function (data, type, row) {
+                            const baseUrl = window.location.origin;
+                            const loginUrl = `${baseUrl}/${seo}/Bayi/Login`;
+                            return `
+                                <div class="d-flex align-items-center">
+                                    <input type="text" value="${loginUrl}" class="form-control form-control-sm mr-2" readonly style="max-width:240px;" />
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="navigator.clipboard.writeText('${loginUrl}')">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>`;
                         }
-                    });
-                }
+                    },
+                    {
+                        data: 'id',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-nowrap',
+                        responsivePriority: 1,
+                        render: id => `
+                            <div class="action-buttons">
+                                <button class="btn btn-warning btn-sm edit-btn" data-id="${id}">
+                                    <i class="fas fa-edit"></i> Düzenle
+                                </button>
+                                <button class="btn btn-danger btn-sm delete-btn" data-id="${id}">
+                                    <i class="fas fa-trash-alt"></i> Sil
+                                </button>
+                            </div>`
+                    }
+                ],
+                order: [] // varsayılan sıralama yok
             });
-        });
+
+            // ➕ Yeni bayi ekle
+            $('#addForm').on('submit', function (e) {
+                e.preventDefault();
+                $.post(`/${seo}/Admin/Bayi/AddBayi`, $(this).serialize(), function (res) {
+                    if (res.status === "success") {
+                        $('#addModal').modal('hide');
+                        table.ajax.reload(null, false);
+                        if (window.toastr) toastr.success("✅ Bayi başarıyla eklendi.");
+                        $('#addForm')[0].reset();
+                    } else if (res.status === "email_exists") {
+                        if (window.toastr) toastr.error("❌ Bu e-posta zaten kayıtlı.");
+                    } else if (res.status === "max_bayi_limit") {
+                        if (window.toastr) toastr.error("⚠️ Maksimum bayi sayısına ulaşıldı.");
+                    } else {
+                        if (window.toastr) toastr.error("❌ Bir hata oluştu: " + (res.message || res.status));
+                    }
+                }).fail(function () {
+                    if (window.toastr) toastr.error("🚫 Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.");
+                });
+            });
 
             // 🔁 Bayi düzenleme modalını aç
             $('#bayiTable').on('click', '.edit-btn', function () {
                 const id = $(this).data('id');
-
                 $.get(`/${seo}/Admin/Bayi/GetBayiById?id=${id}`, function (data) {
                     const form = $('#editForm');
                     form.find('[name=Id]').val(data.id);
@@ -228,42 +262,68 @@
             });
 
             // 🔄 Bayi güncelle
-                   $('#editForm').submit(function (e) {
-            e.preventDefault();
+            $('#editForm').on('submit', function (e) {
+                e.preventDefault();
+                const form = $(this);
+                const formData = {
+                    Id: form.find('[name=Id]').val(),
+                    Ad: form.find('[name=Ad]').val(),
+                    Adres: form.find('[name=Adres]').val(),
+                    Il: form.find('[name=Il]').val(),
+                    Ilce: form.find('[name=Ilce]').val(),
+                    Email: form.find('[name=Email]').val(),
+                    Telefon: form.find('[name=Telefon]').val(),
+                    AktifMi: form.find('[name=AktifMi]').is(':checked')
+                };
 
-            const form = $('#editForm');
-
-            const formData = {
-                Id: form.find('[name=Id]').val(),
-                Ad: form.find('[name=Ad]').val(),
-                Adres: form.find('[name=Adres]').val(),
-                Il: form.find('[name=Il]').val(),
-                Ilce: form.find('[name=Ilce]').val(),
-                Email: form.find('[name=Email]').val(),
-                Telefon: form.find('[name=Telefon]').val(),
-                AktifMi: form.find('[name=AktifMi]').is(':checked')
-            };
-
-            $.ajax({
-                url: `/${seo}/Admin/Bayi/UpdateBayi`,
-                method: 'POST',
-                data: JSON.stringify(formData),
-                contentType: 'application/json',
-                success: function (res) {
-                    if (res.status === "success") {
-                        $('#editModal').modal('hide');
-                        toastr.success("✅ Bayi bilgileri başarıyla güncellendi.");
-                        table.ajax.reload();
-                    } else {
-                        toastr.error("❌ Güncelleme başarısız. Lütfen tekrar deneyin.");
+                $.ajax({
+                    url: `/${seo}/Admin/Bayi/UpdateBayi`,
+                    method: 'POST',
+                    data: JSON.stringify(formData),
+                    contentType: 'application/json',
+                    success: function (res) {
+                        if (res.status === "success") {
+                            $('#editModal').modal('hide');
+                            if (window.toastr) toastr.success("✅ Bayi bilgileri başarıyla güncellendi.");
+                            table.ajax.reload(null, false);
+                        } else {
+                            if (window.toastr) toastr.error("❌ Güncelleme başarısız. Lütfen tekrar deneyin.");
+                        }
+                    },
+                    error: function () {
+                        if (window.toastr) toastr.error("❌ Sunucu hatası oluştu.");
                     }
-                },
-                error: function () {
-                    toastr.error("❌ Sunucu hatası oluştu.");
-                }
+                });
             });
-        });
 
+            // ❌ Bayi sil — SweetAlert2 ile
+            $('#bayiTable').on('click', '.delete-btn', function () {
+                const id = $(this).data('id');
+
+                Swal.fire({
+                    title: 'Emin misiniz?',
+                    text: "Bayiyi silmek istediğinize emin misiniz?",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Evet, Sil',
+                    cancelButtonText: 'Vazgeç'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.post(`/${seo}/Admin/Bayi/DeleteBayi`, { id }, function (res) {
+                            if (res.status === "deleted") {
+                                Swal.fire("Silindi", "Bayi başarıyla silindi.", "success");
+                                table.ajax.reload(null, false);
+                            } else {
+                                Swal.fire("Hata", "Bayi silinemedi.", "error");
+                            }
+                        }).fail(function () {
+                            Swal.fire("Hata", "Sunucu hatası oluştu.", "error");
+                        });
+                    }
+                });
+            });
         });
     </script>
 }

@@ -3,13 +3,55 @@
     ViewData["Title"] = "Firma Mesajlarım";
     Layout = "~/Views/Shared/_BayiLayout.cshtml";
     var firmaSeoUrl = ViewBag.FirmaSeoUrl as string ?? "";
-   
+}
+
+@section Styles {
+    <style>
+        /* Kapalı ticket satır görünümü */
+        .kapali-ticket {
+            background-color: #f7f7f7;
+            color: #888;
+        }
+
+            .kapali-ticket .badge {
+                opacity: .9;
+            }
+
+        /* Tablo mobil uyumu */
+        .table {
+            width: 100% !important;
+        }
+
+            .table td, .table th {
+                vertical-align: middle;
+            }
+
+        /* Küçük ekranda biraz sıkıştır */
+        @@media (max-width: 576px) {
+            .table thead th
+
+        {
+            font-size: .85rem;
+            white-space: nowrap;
+        }
+
+        .table td {
+            font-size: .9rem;
+        }
+        /* İşlem sütunundaki buton tek satıra sığsın */
+        .table .btn {
+            width: 100%;
+        }
+
+        }
+    </style>
 }
 
 <div class="card">
     <div class="card-header bg-info text-white">
         <h5 class="mb-0"><i class="fas fa-comments"></i> Firma Mesajlarım</h5>
     </div>
+
     <div class="card-body">
         @if (Model.Count == 0)
         {
@@ -17,43 +59,48 @@
         }
         else
         {
-            <table class="table table-bordered table-striped">
-                <thead>
-                    <tr>
-                        <th>Tarih</th>
-                        <th>Ürün</th>
-                        <th>Mesaj Türü</th>
-                        <th>Durum</th>
-                        <th>İşlem</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var mesaj in Model)
-                    {
-                        <tr class="@(mesaj.AktifMi ? "" : "kapali-ticket")">
-                            <td>@mesaj.Tarih.ToString("dd.MM.yyyy HH:mm")</td>
-                            <td>@(mesaj.Urun?.Ad ?? "-")</td>
-                            <td>@mesaj.MesajTuru</td>
-                            <td>
-                                @if (mesaj.AktifMi)
-                                {
-                                    <span class="badge badge-success"><i class="fas fa-unlock"></i> Açık</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-secondary"><i class="fas fa-lock"></i> Kapalı</span>
-                                }
-                            </td>
-                            <td>
-                                <a href="/@(firmaSeoUrl)/Bayi/BayiMesajDetay/@mesaj.Id" class="btn btn-info btn-sm">
-
-                                    <i class="fas fa-eye"></i> Detay
-                                </a>
-                            </td>
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Ürün</th>
+                            <th>Mesaj Türü</th>
+                            <th>Durum</th>
+                            <th>İşlem</th>
                         </tr>
-                    }
-
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var mesaj in Model)
+                        {
+                            <tr class="@(mesaj.AktifMi ? "" : "kapali-ticket")">
+                                <td>@mesaj.Tarih.ToString("dd.MM.yyyy HH:mm")</td>
+                                <td>@(mesaj.Urun?.Ad ?? "-")</td>
+                                <td>@mesaj.MesajTuru</td>
+                                <td>
+                                    @if (mesaj.AktifMi)
+                                    {
+                                        <span class="badge badge-success">
+                                            <i class="fas fa-unlock"></i> Açık
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-secondary">
+                                            <i class="fas fa-lock"></i> Kapalı
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/@(firmaSeoUrl)/Bayi/BayiMesajDetay/@mesaj.Id" class="btn btn-info btn-sm">
+                                        <i class="fas fa-eye"></i> Detay
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>

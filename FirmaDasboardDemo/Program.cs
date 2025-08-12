@@ -2,18 +2,28 @@
 using FirmaDasboardDemo.Data;
 using FirmaDasboardDemo.Services;
 using FirmaDasboardDemo.Helpers;
+using FirmaDasboardDemo.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 🔧 Ortam yapılandırmaları (appsettings.json, environment.json, user-secrets)
+// Config zinciri (son eklenen, öncekileri ezer)
 builder.Configuration
-    .SetBasePath(Directory.GetCurrentDirectory())
+    .SetBasePath(builder.Environment.ContentRootPath)
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddUserSecrets<Program>(optional: true)
-    .AddEnvironmentVariables(); // Azure vs. için uygundur
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    // Plesk’te env ayarlayamasan da bunu özellikle yükle:
+    .AddJsonFile("appsettings.Production.json", optional: true, reloadOnChange: true);
 
-// 📧 MailHelper yapılandırması
+if (builder.Environment.IsDevelopment())
+{
+    // Local’de secrets prod değerlerini ezsin
+    builder.Configuration.AddUserSecrets<Program>(optional: true);
+}
+
+// İstersen dursun; prod’da etkisi yok çünkü env set edemiyorsun
+builder.Configuration.AddEnvironmentVariables();
+
+// (Varsa) senin mevcut çağrın:
 MailHelper.Init(builder.Configuration);
 
 // 🔗 Veritabanı bağlantısı
@@ -57,11 +67,45 @@ app.UseSession();
 // 🌐 Son ziyaret edilen URL'yi Session’a kaydet
 app.Use(async (context, next) =>
 {
+    // Son ziyaret edilen URL'yi (query string ile birlikte) tut
     if (!context.Request.Path.StartsWithSegments("/Error"))
     {
-        context.Session.SetString("SonURL", context.Request.Path);
+        var lastUrl = context.Request.Path + context.Request.QueryString;
+        context.Session.SetString("SonURL", lastUrl);
     }
-    await next();
+
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        // Hata olduğunda SuperAdminHataKayitlari'na yaz
+        try
+        {
+            using var scope = context.RequestServices.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            db.SuperAdminHataKayitlari.Add(new SuperAdminHataKaydi
+            {
+                KullaniciRol = context.Session.GetString("UserRole") ?? "Bilinmiyor",
+                KullaniciAdi = context.Session.GetString("UserAd") ?? "Anonim",
+                FirmaSeo = context.Session.GetString("FirmaSeoUrl") ?? "belirsiz",
+                Url = context.Session.GetString("SonURL") ?? context.Request.Path,
+                Tarih = DateTime.Now,
+                HataMesaji = ex.Message,
+                StackTrace = ex.ToString()
+            });
+            db.SaveChanges();
+        }
+        catch
+        {
+            // DB'ye yazılamazsa uygulamayı düşürmeyelim
+        }
+
+        // Mevcut hata yönetimi (UseExceptionHandler) çalışsın
+        throw;
+    }
 });
 
 app.UseAuthentication();

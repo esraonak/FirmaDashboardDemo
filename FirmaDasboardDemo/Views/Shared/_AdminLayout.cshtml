@@ -21,29 +21,34 @@
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+
+    <!-- DataTables Bootstrap 4 + Responsive (CSS) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css" />
+
+    <!-- Toastr -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
     @RenderSection("Styles", required: false)
+
+    <style>
+        .kapali-ticket {
+            background-color: #f2f2f2;
+            color: #999;
+            opacity: 0.6;
+        }
+
+            .kapali-ticket td {
+                pointer-events: auto;
+            }
+
+            .kapali-ticket .btn,
+            .kapali-ticket a {
+                pointer-events: auto !important;
+                opacity: 0.8 !important;
+            }
+    </style>
 </head>
-<style>
-    .kapali-ticket {
-        background-color: #f2f2f2; /* gri arka plan */
-        color: #999; /* soluk yazı rengi */
-        opacity: 0.6; /* yarı saydam görünüm */
-    }
-
-        .kapali-ticket td {
-            pointer-events: auto; /* Hücre içindekiler tıklanabilir olsun */
-        }
-
-        .kapali-ticket .btn,
-        .kapali-ticket a {
-            pointer-events: auto !important; /* butonlar tıklanabilir kalsın */
-            opacity: 0.8 !important; /* hafif soluk görünüm */
-        }
-</style>
-
 
 <body class="hold-transition sidebar-mini layout-fixed">
     <div class="wrapper">
@@ -66,8 +71,7 @@
                         <span class="dropdown-header">Yükleniyor...</span>
                     </div>
                 </li>
-
-               
+            </ul>
         </nav>
 
         <!-- Sidebar -->
@@ -75,7 +79,9 @@
             <a href="#" class="brand-link d-flex align-items-center">
                 @if (!string.IsNullOrEmpty(ViewBag.FirmaLogo))
                 {
-                    <img src="@ViewBag.FirmaLogo" alt="Logo" class="brand-image img-circle elevation-3 ml-2" style="opacity: .9; width: 35px; height: 35px; object-fit: contain;" />
+                    <img src="@ViewBag.FirmaLogo" alt="Logo"
+                         class="brand-image img-circle elevation-3 ml-2 img-fluid"
+                         style="opacity:.9; max-height:35px; object-fit:contain;" />
                 }
                 else
                 {
@@ -151,30 +157,32 @@
                 }
             </div>
         </footer>
-
-
     </div>
 
-    <!-- JS -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- JS: jQuery → Bootstrap → AdminLTE → Eklentiler -->
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- DataTables core + Bootstrap4 + Responsive (JS) -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
 
     <!-- Bildirimleri getir -->
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const seo = "@seo"; // ViewBag.seo ya da ViewData["seo"] ile tanımlanmış olmalı
+            const seo = "@(seo ?? "")";
             const dropdown = document.getElementById("bildirimDropdown");
             const badge = document.getElementById("bildirimSayisi");
             const menu = document.getElementById("bildirimMenu");
 
-            // 🔁 Ortak fonksiyon: JSON fetch + UI işle
             function bildirimiYukle() {
+                if (!seo) { return; }
                 fetch(`/${seo}/Admin/GetOkunmamisMesajSayisi`)
                     .then(res => {
                         if (!res.ok) throw new Error("Sunucu hatası");
@@ -183,23 +191,21 @@
                     .then(data => {
                         menu.innerHTML = "";
 
-                        if (data.length === 0) {
+                        if (!Array.isArray(data) || data.length === 0) {
                             badge.classList.add("d-none");
                             menu.innerHTML = `<span class="dropdown-item text-muted">Yeni mesaj yok</span>`;
                             return;
                         }
 
-                        // 🔔 Sayıyı göster
-                       badge.textContent = data.length;
+                        badge.textContent = data.length;
                         badge.classList.remove("d-none");
 
-                        // ⬇️ Listeyi oluştur
                         menu.innerHTML += `<span class="dropdown-header">${data.length} yeni mesaj</span><div class="dropdown-divider"></div>`;
                         data.forEach(bayi => {
                             menu.innerHTML += `
                                 <a href="/${seo}/Admin/Bayi/Mesajlar?bayiId=${bayi.id}" class="dropdown-item d-flex align-items-center">
                                     <i class="fas fa-user text-primary mr-2"></i>
-                                    <span><strong>${bayi.ad }</strong> yeni mesaj gönderdi</span>
+                                    <span><strong>${bayi.ad}</strong> yeni mesaj gönderdi</span>
                                 </a>`;
                         });
                     })
@@ -210,36 +216,47 @@
                     });
             }
 
-            // 🟢 Sayfa ilk yüklendiğinde sadece sayı
-            fetch(`/${seo}/Admin/GetOkunmamisMesajSayisi`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        badge.textContent = data.length;
-                        badge.classList.remove("d-none");
-                    } else {
+            if (seo) {
+                fetch(`/${seo}/Admin/GetOkunmamisMesajSayisi`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (Array.isArray(data) && data.length > 0) {
+                            badge.textContent = data.length;
+                            badge.classList.remove("d-none");
+                        } else {
+                            badge.classList.add("d-none");
+                        }
+                    })
+                    .catch(() => {
                         badge.classList.add("d-none");
-                    }
-                });
+                    });
+            }
 
-            // 🟡 Mouse ile üzerine gelindiğinde detayları yükle
-            dropdown.addEventListener("mouseenter", bildirimiYukle);
+            if (dropdown) {
+                dropdown.addEventListener("mouseenter", bildirimiYukle);
+                dropdown.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    bildirimiYukle();
+                });
+                dropdown.addEventListener("touchstart", function () { bildirimiYukle(); }, { passive: true });
+            }
         });
-                function TicketKapat(id) {
-            const seo = "@seo";
-            fetch(`/${seo}/Admin/Mesaj/Kapat/${id}`, {
-                method: "POST"
-            })
+
+        function TicketKapat(id) {
+            const seo = "@(seo ?? "")";
+            if (!seo) return;
+            fetch(`/${seo}/Admin/Mesaj/Kapat/${id}`, { method: "POST" })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        toastr.success("Ticket kapatıldı.");
+                        if (window.toastr) toastr.success("Ticket kapatıldı.");
                         location.reload();
                     } else {
-                        toastr.error("İşlem başarısız.");
+                        if (window.toastr) toastr.error("İşlem başarısız.");
                     }
                 });
         }
+
         function MesajSil(id) {
             Swal.fire({
                 title: "Silmek istediğinize emin misiniz?",
@@ -249,23 +266,21 @@
                 cancelButtonText: "İptal"
             }).then((result) => {
                 if (result.isConfirmed) {
-                    const seo = "@seo";
-                    fetch(`/${seo}/Admin/Mesaj/Sil/${id}`, {
-                        method: "POST"
-                    })
+                    const seo = "@(seo ?? "")";
+                    if (!seo) return;
+                    fetch(`/${seo}/Admin/Mesaj/Sil/${id}`, { method: "POST" })
                         .then(res => res.json())
                         .then(data => {
                             if (data.success) {
-                                toastr.success("Mesaj başarıyla silindi.");
+                                if (window.toastr) toastr.success("Mesaj başarıyla silindi.");
                                 location.reload();
                             } else {
-                                toastr.error("Silme işlemi başarısız.");
+                                if (window.toastr) toastr.error("Silme işlemi başarısız.");
                             }
                         });
                 }
             });
         }
-
     </script>
 
     @await RenderSectionAsync("Scripts", required: false)

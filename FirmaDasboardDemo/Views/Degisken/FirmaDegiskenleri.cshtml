@@ -4,33 +4,62 @@
     var seo = Context.Request.RouteValues["firmaSeoUrl"];
 }
 
+@section Styles {
+    <!-- DataTables Bootstrap4 + Responsive (CSS) -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css" />
+    <!-- Toastr CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <style>
+        /* Mobil uyum dokunuşları */
+        #degiskenTable {
+            width: 100% !important;
+        }
+
+        .modal .form-control {
+            font-size: .95rem;
+        }
+    </style>
+}
+
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Firma Değişkenleri</h5>
-        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#ekleModal">+ Yeni Değişken</button>
+        <!-- Hem BS5 hem BS4 için attribute'lar -->
+        <button class="btn btn-success btn-sm"
+                data-bs-toggle="modal" data-bs-target="#ekleModal"
+                data-toggle="modal" data-target="#ekleModal">
+            + Yeni Değişken
+        </button>
     </div>
     <div class="card-body">
-        <table id="degiskenTable" class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Ad</th>
-                    <th>Açıklama</th>
-                    <th>Değer</th>
-                    <th>İşlemler</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <div class="table-responsive">
+            <table id="degiskenTable" class="table table-bordered table-striped nowrap" style="width:100%">
+                <thead>
+                    <tr>
+                        <th>Ad</th>
+                        <th>Açıklama</th>
+                        <th>Değer</th>
+                        <th>İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <!-- ✅ Ekle Modal -->
-<div class="modal fade" id="ekleModal" tabindex="-1">
+<div class="modal fade" id="ekleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <form id="ekleForm" class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Yeni Firma Değişkeni</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <!-- BS5 + BS4 uyumlu kapatma -->
+                <button type="button" class="btn-close close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body row">
                 <div class="col-md-12 mb-2">
@@ -54,13 +83,15 @@
 </div>
 
 <!-- ✅ Güncelle Modal -->
-<div class="modal fade" id="guncelleModal" tabindex="-1">
+<div class="modal fade" id="guncelleModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <form id="guncelleForm" class="modal-content">
             <input type="hidden" name="Id" />
             <div class="modal-header">
                 <h5 class="modal-title">Firma Değişkeni Güncelle</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
             </div>
             <div class="modal-body row">
                 <div class="col-md-12 mb-2">
@@ -84,44 +115,52 @@
 </div>
 
 @section Scripts {
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    <!-- Toastr -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
+
+    <!-- DataTables core + Bootstrap4 + Responsive (JS) -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
 
     <script>
         const seo = "@seo";
 
-        toastr.options = {
-            "positionClass": "toast-top-right",
-            "timeOut": "3000"
-        };
+        toastr.options = { positionClass: "toast-top-right", timeOut: 3000 };
 
         $(document).ready(function () {
             const table = $("#degiskenTable").DataTable({
                 ajax: `/${seo}/Admin/Degisken/GetAll`,
+                responsive: true,
+                autoWidth: false,
+                deferRender: true,
+                language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/tr.json" },
                 columns: [
-                    { data: "ad" },
-                    { data: "aciklama" },
-                    { data: "deger" },
+                    { data: "ad",        responsivePriority: 1 },
+                    { data: "aciklama",  responsivePriority: 4 },
+                    { data: "deger",     responsivePriority: 3 },
                     {
                         data: null,
+                        orderable: false, searchable: false,
+                        className: "text-nowrap",
                         render: data => `
-                            <button class="btn btn-sm btn-warning me-1" onclick="guncelleDegisken(${data.id})">Güncelle</button>
-                            <button class="btn btn-sm btn-danger" onclick="silDegisken(${data.id})">Sil</button>`
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button class="btn btn-warning" onclick="guncelleDegisken(${data.id})">Güncelle</button>
+                                <button class="btn btn-danger" onclick="silDegisken(${data.id})">Sil</button>
+                            </div>`
                     }
                 ]
             });
 
-            $("#ekleForm").submit(function (e) {
+            $("#ekleForm").on("submit", function (e) {
                 e.preventDefault();
                 const form = $(this);
                 $.post(`/${seo}/Admin/Degisken/Ekle`, form.serialize(), function (res) {
                     if (res.status === "success") {
                         $("#ekleModal").modal("hide");
                         form[0].reset();
-                        table.ajax.reload();
+                        table.ajax.reload(null, false);
                         toastr.success("✅ Değişken başarıyla eklendi.");
                     } else if (res.status === "duplicate") {
                         toastr.error("⚠️ Bu adla zaten bir değişken var.");
@@ -131,13 +170,13 @@
                 });
             });
 
-            $("#guncelleForm").submit(function (e) {
+            $("#guncelleForm").on("submit", function (e) {
                 e.preventDefault();
                 const form = $(this);
                 $.post(`/${seo}/Admin/Degisken/Guncelle`, form.serialize(), function (res) {
                     if (res.status === "success") {
                         $("#guncelleModal").modal("hide");
-                        table.ajax.reload();
+                        table.ajax.reload(null, false);
                         toastr.success("✅ Değişken başarıyla güncellendi.");
                     } else if (res.status === "duplicate") {
                         toastr.error("⚠️ Bu adla başka bir değişken var.");
@@ -164,7 +203,7 @@
                 if (result.isConfirmed) {
                     $.post(`/${seo}/Admin/Degisken/Sil/${id}`, function (res) {
                         if (res.status === "success") {
-                            $("#degiskenTable").DataTable().ajax.reload();
+                            $("#degiskenTable").DataTable().ajax.reload(null, false);
                             toastr.success("✅ Değişken silindi.");
                         } else {
                             toastr.error("❌ Silme işlemi başarısız oldu.");

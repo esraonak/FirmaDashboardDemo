@@ -2,63 +2,75 @@
     Layout = null;
     var seo = Context.Session.GetString("FirmaSeoUrl");
 }
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] </title>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <title>@ViewData["Title"]</title>
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700" rel="stylesheet" />
+
+    <!-- Font Awesome (yerel) -->
     <link rel="stylesheet" href="~/plugins/fontawesome-free/css/all.min.css" />
+
+    <!-- AdminLTE + site -->
     <link rel="stylesheet" href="~/dist/css/adminlte.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css" />
+    <!-- DataTables Bootstrap4 + Responsive CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap4.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap4.min.css" />
 
     @RenderSection("Styles", required: false)
-</head>
-<style>
-    .kapali-ticket {
-        background-color: #f2f2f2 !important;
-        color: #999 !important;
-        opacity: 0.7;
-    }
 
-        .kapali-ticket .badge {
-            background-color: #bbb !important;
-            color: #444 !important;
+    <style>
+        .kapali-ticket {
+            background-color: #f2f2f2 !important;
+            color: #999 !important;
+            opacity: .7;
         }
 
-        .kapali-ticket td {
-            pointer-events: none;
-        }
-
-            .kapali-ticket td:last-child a {
-                pointer-events: auto !important;
-                opacity: 1 !important;
+            .kapali-ticket .badge {
+                background-color: #bbb !important;
+                color: #444 !important;
             }
-</style>
 
+            .kapali-ticket td {
+                pointer-events: none;
+            }
 
+                .kapali-ticket td:last-child a {
+                    pointer-events: auto !important;
+                    opacity: 1 !important;
+                }
+
+        /* küçük ekranda başlıklar taşmasın */
+        @@media (max-width:576px) {
+            .main-header .h5
+
+        {
+            font-size: 1rem;
+        }
+
+        .brand-text {
+            font-size: .9rem;
+        }
+
+        }
+    </style>
+</head>
 
 <body class="hold-transition sidebar-mini layout-fixed">
     <div class="wrapper">
         <!-- Navbar -->
         <nav class="main-header navbar navbar-expand navbar-white navbar-light">
-            <!-- Sol taraf: Sidebar butonu ve başlık -->
             <div class="d-flex align-items-center">
                 <a class="nav-link" data-widget="pushmenu" href="#" role="button"><i class="fas fa-bars"></i></a>
                 <span class="ml-2 font-weight-bold h5 mb-0">Bayi Paneli</span>
             </div>
 
-            <!-- Sağ taraf: Sosyal medya ikonları -->
             <div class="ml-auto d-flex align-items-center flex-wrap pr-3">
                 @if (!string.IsNullOrEmpty(Context.Session.GetString("Instagram")))
                 {
@@ -93,16 +105,13 @@
                 @if (!string.IsNullOrEmpty(ViewBag.FirmaLogo))
                 {
                     <img src="@ViewBag.FirmaLogo" alt="Logo" class="brand-image img-circle elevation-3 ml-2"
-                         style="opacity: .9; width: 35px; height: 35px; object-fit: contain;" />
+                         style="opacity:.9; width:35px; height:35px; object-fit:contain;" />
                 }
                 else
                 {
                     <i class="fas fa-cogs ml-3 mr-2"></i>
                 }
-
-                <span class="brand-text font-weight-bold ml-2">
-                    @($"{seo?.ToUpper()} BAYİ PANELİ")
-                </span>
+                <span class="brand-text font-weight-bold ml-2">@($"{seo?.ToUpper()} BAYİ PANELİ")</span>
             </a>
 
             <div class="sidebar">
@@ -110,26 +119,22 @@
                     <ul class="nav nav-pills nav-sidebar flex-column">
                         <li class="nav-item">
                             <a href="/@seo/Bayi/Dashboard" class="nav-link">
-                                <i class="nav-icon fas fa-calculator"></i>
-                                <p>Hesaplama</p>
+                                <i class="nav-icon fas fa-calculator"></i><p>Hesaplama</p>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a href="/@seo/Bayi/Mesajlarim" class="nav-link">
-                                <i class="nav-icon fas fa-comments"></i>
-                                <p>Firma Mesajları</p>
+                                <i class="nav-icon fas fa-comments"></i><p>Firma Mesajları</p>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a href="/@seo/Bayi/KullaniciAyar" class="nav-link">
-                                <i class="nav-icon fas fa-cog"></i>
-                                <p>Kullanıcı Ayarları</p>
+                                <i class="nav-icon fas fa-cog"></i><p>Kullanıcı Ayarları</p>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a href="/@seo/Bayi/Login" class="nav-link">
-                                <i class="nav-icon fas fa-sign-out-alt"></i>
-                                <p>Çıkış Yap</p>
+                                <i class="nav-icon fas fa-sign-out-alt"></i><p>Çıkış Yap</p>
                             </a>
                         </li>
                     </ul>
@@ -157,16 +162,20 @@
         </footer>
     </div>
 
-    <!-- JS -->
-   
+    <!-- JS (tek jQuery) -->
     <script src="~/plugins/jquery/jquery.min.js"></script>
     <script src="~/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="~/dist/js/adminlte.min.js"></script>
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- DataTables core + Bootstrap4 + Responsive JS -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap4.min.js"></script>
     <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap4.min.js"></script>
 
     @await RenderSectionAsync("Scripts", required: false)
 </body>
